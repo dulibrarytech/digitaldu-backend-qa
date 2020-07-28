@@ -1,12 +1,17 @@
-from flask import Flask, escape, request
-from flask_cors import CORS
-from waitress import serve
 import os
 import json
 import qa_lib
+from flask import Flask, escape, request
+from flask_cors import CORS
+from waitress import serve
+from dotenv import load_dotenv
+from os.path import join, dirname
 
-ready_path = '/Users/freyes/Documents/digitalbackendqa/001-ready/'
-ingest_path = '/Users/freyes/Documents/digitalbackendqa/002-ingest/'
+dotenv_path = join(dirname(__file__), '.env')
+load_dotenv(dotenv_path)
+
+ready_path = os.getenv('READY_PATH')
+ingest_path = os.getenv('INGEST_PATH')
 
 app = Flask(__name__)
 cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
