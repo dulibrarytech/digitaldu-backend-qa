@@ -1,7 +1,7 @@
 import os
 import json
 import qa_lib
-from flask import Flask, escape, request
+from flask import Flask, request
 from flask_cors import CORS
 from waitress import serve
 from dotenv import load_dotenv
@@ -26,6 +26,9 @@ def list_ready_folders():
 
     if api_key is None:
         return json.dumps(['Access denied.'])
+    elif api_key != os.getenv('API_KEY'):
+        return json.dumps(['Access denied.'])
+
 
     folders = [f for f in os.listdir(ready_path) if not f.startswith('.')]
     return json.dumps(folders)
@@ -35,6 +38,8 @@ def run_qa_on_ready():
     api_key = request.args.get('api_key')
 
     if api_key is None:
+        return json.dumps(['Access denied.'])
+    elif api_key != os.getenv('API_KEY'):
         return json.dumps(['Access denied.'])
 
     folder = request.args.get('folder')
