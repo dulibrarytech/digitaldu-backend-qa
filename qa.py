@@ -29,7 +29,6 @@ def list_ready_folders():
     elif api_key != os.getenv('API_KEY'):
         return json.dumps(['Access denied.'])
 
-
     folders = [f for f in os.listdir(ready_path) if not f.startswith('.')]
     return json.dumps(folders)
 
@@ -54,5 +53,20 @@ def run_qa_on_ready():
     errors = dict(missing_uris=missing_uris, missing_files=missing_files)
 
     return json.dumps(errors)
+
+@app.route('/api/v1/qa/move-to-ingest', methods=['GET'])
+def move_to_ingest():
+    api_key = request.args.get('api_key')
+
+    if api_key is None:
+        return json.dumps(['Access denied.'])
+    elif api_key != os.getenv('API_KEY'):
+        return json.dumps(['Access denied.'])
+
+    pid = request.args.get('pid')
+    folder = request.args.get('folder')
+    qa_lib.move_to_ingest(ready_path, ingest_path, pid, folder)
+
+    return json.dumps([])
 
 serve(app, host='0.0.0.0', port=8080)

@@ -1,4 +1,5 @@
 import os
+import shutil
 
 # Checks packages
 def check_package_names(ready_path, folder):
@@ -52,3 +53,13 @@ def check_uri_txt(ready_path, folder):
             missing.append(i)
 
     return missing
+
+# Moves folder from ready to ingest folder and renames to pid
+def move_to_ingest(ready_path, ingest_path, pid, folder):
+
+    src = ready_path + folder
+    dest = ingest_path
+    mode = 0o666
+    shutil.move(src, dest)
+    os.mkdir(src, mode)
+    os.rename(dest + folder, dest + pid)
