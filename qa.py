@@ -66,6 +66,7 @@ def move_to_ingest():
     pid = request.args.get('pid')
     folder = request.args.get('folder')
     qa_lib.move_to_ingest(ready_path, ingest_path, pid, folder)
+    qa_lib.move_to_sftp(ingest_path, pid)
 
     return json.dumps([])
 

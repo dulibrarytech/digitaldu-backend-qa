@@ -2,3 +2,4 @@ Flask==0.12
 waitress==1.4.4
 flask-cors
 python-dotenv
+pysftp

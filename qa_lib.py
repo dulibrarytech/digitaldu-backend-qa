@@ -1,5 +1,6 @@
 import os
 import shutil
+import pysftp
 
 # Checks packages
 def check_package_names(ready_path, folder):
@@ -63,3 +64,25 @@ def move_to_ingest(ready_path, ingest_path, pid, folder):
     shutil.move(src, dest)
     os.mkdir(src, mode)
     os.rename(dest + folder, dest + pid)
+
+# Moves folder to archivematica sftp
+def move_to_sftp(ingest_path, pid):
+    host = os.getenv('SFTP_HOST')
+    username = os.getenv('SFTP_ID')
+    password = os.getenv('SFTP_PWD')
+    path = os.getenv('SFTP_REMOTE_PATH')
+    cnopts = pysftp.CnOpts()
+
+    with pysftp.Connection(host=host, username=username, password=password, cnopts=cnopts) as sftp:
+
+        print('Connected to Archivematica SFTP server...')
+
+        # Define the file that you want to upload from your local directorty
+        src = ingest_path + pid
+        print(src)
+        # Define the remote path where the file will be uploaded
+        dest = path
+        print(dest)
+
+        # TODO: reconstruct folders and move files to sftp
+        # sftp.put()
