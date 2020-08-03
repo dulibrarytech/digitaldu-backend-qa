@@ -58,7 +58,7 @@ def check_uri_txt(ready_path, folder):
 
 # Get package file size
 # https://stackoverflow.com/questions/1392413/calculating-a-directorys-size-using-python
-def check_file_sizes(ready_path, folder):
+def get_package_size(ready_path, folder):
     package = ready_path + folder
     total_size = 0
     for dirpath, dirnames, filenames in os.walk(package):

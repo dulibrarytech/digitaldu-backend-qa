@@ -50,7 +50,7 @@ def run_qa_on_ready():
 
     missing_files = qa_lib.check_file_names(ready_path, folder)
     missing_uris = qa_lib.check_uri_txt(ready_path, folder)
-    total_size = qa_lib.check_file_sizes(ready_path, folder)
+    total_size = qa_lib.get_package_size(ready_path, folder)
 
     # TODO: figure out how to split up LARGE collections
 
