@@ -45,14 +45,18 @@ def run_qa_on_ready():
     result = qa_lib.check_package_names(ready_path, folder)
 
     if result == -1:
-        return json.dumps([f'There are no packages in "{folder}".'])
+        response = dict(missing_uris='empty', missing_files='empty')
+        return json.dumps(response)
 
     missing_files = qa_lib.check_file_names(ready_path, folder)
     missing_uris = qa_lib.check_uri_txt(ready_path, folder)
+    total_size = qa_lib.check_file_sizes(ready_path, folder)
 
-    errors = dict(missing_uris=missing_uris, missing_files=missing_files)
+    # TODO: figure out how to split up LARGE collections
 
-    return json.dumps(errors)
+    results = dict(missing_uris=missing_uris, missing_files=missing_files, total_size=total_size)
+
+    return json.dumps(results)
 
 @app.route('/api/v1/qa/move-to-ingest', methods=['GET'])
 def move_to_ingest():
@@ -65,9 +69,12 @@ def move_to_ingest():
 
     pid = request.args.get('pid')
     folder = request.args.get('folder')
-    qa_lib.move_to_ingest(ready_path, ingest_path, pid, folder)
-    qa_lib.move_to_sftp(ingest_path, pid)
+    qa_lib.move_to_ingest(ready_path, ingest_path, folder)
+    result = qa_lib.move_to_sftp(ingest_path, folder, pid)
 
-    return json.dumps([])
+    if len(result) > 0:
+        return json.dumps(dict(message='Package not uploaded to Archivematica sftp'))
+    else:
+        return json.dumps(dict(message='Package uploaded to Archivematica sftp'))
 
 serve(app, host='0.0.0.0', port=8080)

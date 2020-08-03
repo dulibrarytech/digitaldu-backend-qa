@@ -1,6 +1,7 @@
 import os
 import shutil
 import pysftp
+import time
 
 # Checks packages
 def check_package_names(ready_path, folder):
@@ -55,34 +56,50 @@ def check_uri_txt(ready_path, folder):
 
     return missing
 
-# Moves folder from ready to ingest folder and renames to pid
-def move_to_ingest(ready_path, ingest_path, pid, folder):
+# Get package file size
+# https://stackoverflow.com/questions/1392413/calculating-a-directorys-size-using-python
+def check_file_sizes(ready_path, folder):
+    package = ready_path + folder
+    total_size = 0
+    for dirpath, dirnames, filenames in os.walk(package):
+        for f in filenames:
+            fp = os.path.join(dirpath, f)
+            # skip if it is symbolic link
+            if not os.path.islink(fp):
+                total_size += os.path.getsize(fp)
 
-    src = ready_path + folder
-    dest = ingest_path
+    return total_size
+
+# Moves folder from ready to ingest folder and renames to pid
+def move_to_ingest(ready_path, ingest_path, folder):
+
     mode = 0o666
-    shutil.move(src, dest)
-    os.mkdir(src, mode)
-    os.rename(dest + folder, dest + pid)
+    # TODO: add try catch
+    # TODO: get total size of ingest packages
+    shutil.move(ready_path + folder, ingest_path + folder)
+    os.mkdir(ready_path + folder, mode)
 
 # Moves folder to archivematica sftp
-def move_to_sftp(ingest_path, pid):
+def move_to_sftp(ingest_path, folder, pid):
+
     host = os.getenv('SFTP_HOST')
     username = os.getenv('SFTP_ID')
     password = os.getenv('SFTP_PWD')
-    path = os.getenv('SFTP_REMOTE_PATH')
+    sftp_path = os.getenv('SFTP_REMOTE_PATH')
     cnopts = pysftp.CnOpts()
+    missing = []
+
+    # TODO: add try catch
+    os.rename(ingest_path + folder, ingest_path + pid)
 
     with pysftp.Connection(host=host, username=username, password=password, cnopts=cnopts) as sftp:
 
-        print('Connected to Archivematica SFTP server...')
+        # TODO: try catch
+        sftp.put_r(ingest_path, sftp_path, preserve_mtime=True)
+        packages = sftp.listdir()
 
-        # Define the file that you want to upload from your local directorty
-        src = ingest_path + pid
-        print(src)
-        # Define the remote path where the file will be uploaded
-        dest = path
-        print(dest)
+        if pid not in packages:
+            missing.append(-1)
 
-        # TODO: reconstruct folders and move files to sftp
-        # sftp.put()
+        sftp.close()
+        return missing
