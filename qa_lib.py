@@ -1,7 +1,6 @@
 import os
 import shutil
 import pysftp
-import time
 
 # Checks packages
 def check_package_names(ready_path, folder):
@@ -59,6 +58,7 @@ def check_uri_txt(ready_path, folder):
 # Get package file size
 # https://stackoverflow.com/questions/1392413/calculating-a-directorys-size-using-python
 def get_package_size(ready_path, folder):
+
     package = ready_path + folder
     total_size = 0
     for dirpath, dirnames, filenames in os.walk(package):
@@ -74,10 +74,16 @@ def get_package_size(ready_path, folder):
 def move_to_ingest(ready_path, ingest_path, folder):
 
     mode = 0o666
-    # TODO: add try catch
-    # TODO: get total size of ingest packages
-    shutil.move(ready_path + folder, ingest_path + folder)
-    os.mkdir(ready_path + folder, mode)
+
+    try:
+        shutil.move(ready_path + folder, ingest_path + folder)
+    except:
+        return 'ERROR: Unable to move folder (move_to_ingest)'
+
+    try:
+        os.mkdir(ready_path + folder, mode)
+    except:
+        return 'ERROR: Unable to create folder (move_to_ingest)'
 
 # Moves folder to archivematica sftp
 def move_to_sftp(ingest_path, folder, pid):
@@ -89,8 +95,10 @@ def move_to_sftp(ingest_path, folder, pid):
     cnopts = pysftp.CnOpts()
     missing = []
 
-    # TODO: add try catch
-    os.rename(ingest_path + folder, ingest_path + pid)
+    try:
+        os.rename(ingest_path + folder, ingest_path + pid)
+    except:
+        return 'ERROR: Unable to rename folder (move_to_sftp)'
 
     with pysftp.Connection(host=host, username=username, password=password, cnopts=cnopts) as sftp:
 

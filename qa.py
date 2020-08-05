@@ -22,6 +22,7 @@ def index():
 
 @app.route('/api/v1/qa/list-ready', methods=['GET'])
 def list_ready_folders():
+
     api_key = request.args.get('api_key')
 
     if api_key is None:
@@ -34,6 +35,7 @@ def list_ready_folders():
 
 @app.route('/api/v1/qa/ready', methods=['GET'])
 def run_qa_on_ready():
+
     api_key = request.args.get('api_key')
 
     if api_key is None:
@@ -42,24 +44,33 @@ def run_qa_on_ready():
         return json.dumps(['Access denied.'])
 
     folder = request.args.get('folder')
+    folder_name = folder.find('-resource')
+
+    if folder_name == -1:
+        result = dict(message=f'"{folder}". Please review the ingest documentation for folder naming convention.')
+        return json.dumps(result)
+
     result = qa_lib.check_package_names(ready_path, folder)
 
     if result == -1:
-        response = dict(missing_uris='empty', missing_files='empty')
+        response = dict(missing_uris='empty', missing_files='empty', message='Folder is empty')
         return json.dumps(response)
 
     missing_files = qa_lib.check_file_names(ready_path, folder)
     missing_uris = qa_lib.check_uri_txt(ready_path, folder)
     total_size = qa_lib.get_package_size(ready_path, folder)
 
-    # TODO: figure out how to split up LARGE collections
+    if total_size > 225000000000:
+        # TODO: figure out how to split up LARGE (over 225GB) collections
+        print('Split up packages')
 
-    results = dict(missing_uris=missing_uris, missing_files=missing_files, total_size=total_size)
+    results = dict(missing_uris=missing_uris, missing_files=missing_files, total_size=total_size, message='Package results')
 
     return json.dumps(results)
 
 @app.route('/api/v1/qa/move-to-ingest', methods=['GET'])
 def move_to_ingest():
+
     api_key = request.args.get('api_key')
 
     if api_key is None:
