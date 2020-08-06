@@ -44,10 +44,10 @@ def run_qa_on_ready():
         return json.dumps(['Access denied.'])
 
     folder = request.args.get('folder')
-    folder_name = folder.find('-resource')
+    errors = qa_lib.check_folder_name(folder)
 
-    if folder_name == -1:
-        result = dict(message=f'"{folder}". Please review the ingest documentation for folder naming convention.')
+    if len(errors) > 0:
+        result = dict(message=f'"{folder}". Please review the ingest documentation for folder naming convention.', errors=errors)
         return json.dumps(result)
 
     result = qa_lib.check_package_names(ready_path, folder)

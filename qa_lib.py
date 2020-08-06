@@ -2,6 +2,33 @@ import os
 import shutil
 import pysftp
 
+# checks folder name
+def check_folder_name(folder):
+
+    errors = []
+
+    if folder.find('new_') == -1:
+        errors.append('new_')
+
+    if folder.find('-resource') == -1:
+        errors.append('-resource')
+
+    if folder.find('resource_') == -1:
+        errors.append('resource_')
+
+    tmp = folder.split('_')
+    is_id = tmp[-1].isdigit()
+
+    if is_id == False:
+        errors.append('missing URI')
+
+    print(errors)
+
+    if len(errors) > 0:
+        return errors
+    else:
+        return []
+
 # Checks packages
 def check_package_names(ready_path, folder):
 
@@ -35,6 +62,7 @@ def check_file_names(ready_path, folder):
             if j.upper():
                 os.rename(package + j, package + j.lower().replace(' ', ''))
 
+    # TODO: check object extensions
     return missing
 
 # Checks for missing uri.txt files
