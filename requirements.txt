@@ -3,3 +3,4 @@ waitress==1.4.4
 flask-cors
 python-dotenv
 pysftp
+Pillow
