@@ -16,10 +16,20 @@ ingest_path = os.getenv('INGEST_PATH')
 app = Flask(__name__)
 cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
 
+'''
+Renders QA API Information
+@returns: String
+'''
 @app.route('/', methods=['GET'])
 def index():
     return f'DigitalDU-QA v0.1.0'
 
+
+'''
+Gets a list of ready folders
+@param: api_key
+@returns: Json
+'''
 @app.route('/api/v1/qa/list-ready', methods=['GET'])
 def list_ready_folders():
 
@@ -33,7 +43,13 @@ def list_ready_folders():
     folders = [f for f in os.listdir(ready_path) if not f.startswith('.')]
     return json.dumps(folders)
 
-@app.route('/api/v1/qa/ready', methods=['GET'])
+
+'''
+Runs QA on ready folder
+@param: api_key
+@returns: Json
+'''
+@app.route('/api/v1/qa/run-qa', methods=['GET'])
 def run_qa_on_ready():
 
     api_key = request.args.get('api_key')
