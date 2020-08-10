@@ -69,18 +69,18 @@ def run_qa_on_ready():
     result = qa_lib.check_package_names(ready_path, folder)
 
     if result == -1:
-        response = dict(missing_uris='empty', missing_files='empty', message='Folder is empty')
+        response = dict(file_errors='empty', uri_errors='empty', message='Folder is empty')
         return json.dumps(response)
 
-    missing_files = qa_lib.check_file_names(ready_path, folder)
-    missing_uris = qa_lib.check_uri_txt(ready_path, folder)
+    file_errors = qa_lib.check_file_names(ready_path, folder)
+    uri_errors = qa_lib.check_uri_txt(ready_path, folder)
     total_size = qa_lib.get_package_size(ready_path, folder)
 
     if total_size > 225000000000:
         # TODO: figure out how to split up LARGE (over 225GB) collections
         print('Split up packages')
 
-    results = dict(missing_uris=missing_uris, missing_files=missing_files, total_size=total_size, message='Package results')
+    results = dict(file_errors=file_errors, uri_errors=uri_errors, total_size=total_size, message='Package results')
 
     return json.dumps(results)
 
@@ -94,11 +94,28 @@ def move_to_ingest():
     elif api_key != os.getenv('API_KEY'):
         return json.dumps(['Access denied.'])
 
+    folder = request.args.get('folder')
+    results = qa_lib.move_to_ingest(ready_path, ingest_path, folder)
+
+    if len(results) > 0:
+        return json.dumps(dict(message='QA process failed.'))
+
+    return json.dumps(dict(message='Packages moved to ingest folder'))
+
+@app.route('/api/v1/qa/move-to-sftp', methods=['GET'])
+def move_to_sftp():
+    api_key = request.args.get('api_key')
+
+    if api_key is None:
+        return json.dumps(['Access denied.'])
+    elif api_key != os.getenv('API_KEY'):
+        return json.dumps(['Access denied.'])
+
     pid = request.args.get('pid')
     folder = request.args.get('folder')
-    qa_lib.move_to_ingest(ready_path, ingest_path, folder)
-    result = qa_lib.move_to_sftp(ingest_path, folder, pid)
 
+    result = qa_lib.move_to_sftp(ingest_path, folder, pid)
+    print(result)
     if len(result) > 0:
         return json.dumps(dict(message='Package not uploaded to Archivematica sftp'))
     else:

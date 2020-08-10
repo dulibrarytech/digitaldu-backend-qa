@@ -175,6 +175,8 @@ def move_to_ingest(ready_path, ingest_path, folder):
     except:
         return errors.append('ERROR: Unable to create folder (move_to_ingest)')
 
+    return errors
+
 
 '''
 Moves folder to archivematica sftp
@@ -193,6 +195,7 @@ def move_to_sftp(ingest_path, folder, pid):
     cnopts = pysftp.CnOpts()
     errors = []
 
+    # TODO: calculate time based on size of collection
     time.sleep(10.0)
 
     try:
@@ -200,16 +203,23 @@ def move_to_sftp(ingest_path, folder, pid):
     except:
         return errors.append('ERROR: Unable to rename folder (move_to_sftp)')
 
-    '''
     with pysftp.Connection(host=host, username=username, password=password, cnopts=cnopts) as sftp:
 
         # TODO: try catch
-        sftp.put_r(ingest_path, sftp_path, preserve_mtime=True)
-        packages = sftp.listdir()
+        try:
+            sftp.put_r(ingest_path, sftp_path, preserve_mtime=True)
+        except:
+            return errors.append(f'ERROR; Unable to upload folder {pid}')
 
+        packages = sftp.listdir()
+        print(packages)
+
+        # TODO: get package count and compare after upload
         if pid not in packages:
             errors.append(-1)
 
+        # TODO: calculate time based on size of collection
+        time.sleep(60.0*5)
         sftp.close()
-    '''
+
     return errors
