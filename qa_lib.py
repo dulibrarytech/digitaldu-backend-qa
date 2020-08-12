@@ -71,10 +71,12 @@ def check_file_names(ready_path, folder):
         files = [f for f in os.listdir(package) if not f.startswith('.')]
         [os.remove(package + f) for f in os.listdir(package) if f.startswith('.')]
 
+        # print(files)
         if len(files) < 2:
             errors.append(i)
 
         for j in files:
+            print(j)
             if j.upper():
                 os.rename(package + j, package + j.lower().replace(' ', ''))
                 # check images here
@@ -160,7 +162,7 @@ Moves folder from ready to ingest folder and renames it using pid
 @param: folder
 @returns: String (if there is an error)
 '''
-def move_to_ingest(ready_path, ingest_path, folder):
+def move_to_ingest(ready_path, ingest_path, pid, folder):
 
     errors = []
     mode = 0o666
@@ -169,6 +171,14 @@ def move_to_ingest(ready_path, ingest_path, folder):
         shutil.move(ready_path + folder, ingest_path + folder)
     except:
         return errors.append('ERROR: Unable to move folder (move_to_ingest)')
+
+    # TODO: calculate time based on size of collection
+    time.sleep(15.0)
+
+    try:
+        os.rename(ingest_path + folder, ingest_path + pid)
+    except:
+        return errors.append('ERROR: Unable to rename folder (move_to_ingest)')
 
     try:
         os.mkdir(ready_path + folder, mode)
@@ -184,9 +194,9 @@ Moves folder to archivematica sftp
 @param: username
 @param: password
 @param: sftp_path
-@returns: Array
+@returns: void
 '''
-def move_to_sftp(ingest_path, folder, pid):
+def move_to_sftp(ingest_path, pid):
 
     host = os.getenv('SFTP_HOST')
     username = os.getenv('SFTP_ID')
@@ -195,31 +205,62 @@ def move_to_sftp(ingest_path, folder, pid):
     cnopts = pysftp.CnOpts()
     errors = []
 
-    # TODO: calculate time based on size of collection
-    time.sleep(10.0)
-
-    try:
-        os.rename(ingest_path + folder, ingest_path + pid)
-    except:
-        return errors.append('ERROR: Unable to rename folder (move_to_sftp)')
-
     with pysftp.Connection(host=host, username=username, password=password, cnopts=cnopts) as sftp:
 
-        # TODO: try catch
-        try:
-            sftp.put_r(ingest_path, sftp_path, preserve_mtime=True)
-        except:
-            return errors.append(f'ERROR; Unable to upload folder {pid}')
+        sftp.put_r(ingest_path, sftp_path, preserve_mtime=True)
+
+        # errors.append(f'ERROR; Unable to upload folder {pid}')
 
         packages = sftp.listdir()
         print(packages)
 
         # TODO: get package count and compare after upload
+        # TODO: log
         if pid not in packages:
             errors.append(-1)
 
-        # TODO: calculate time based on size of collection
-        time.sleep(60.0*5)
-        sftp.close()
 
-    return errors
+'''
+checks upload on archivematica sftp
+@param: host
+@param: username
+@param: password
+@param: sftp_path
+@returns: Array
+'''
+def check_sftp(ingest_path, pid):
+
+    host = os.getenv('SFTP_HOST')
+    username = os.getenv('SFTP_ID')
+    password = os.getenv('SFTP_PWD')
+    cnopts = pysftp.CnOpts()
+    sftp_path = os.getenv('SFTP_REMOTE_PATH')
+    # errors = []
+
+    with pysftp.Connection(host=host, username=username, password=password, cnopts=cnopts) as sftp:
+
+        package = ingest_path + pid
+        print(package)
+
+        local_packages = [f for f in os.listdir(package) if not f.startswith('.')]
+        print(len(local_packages))
+
+        # TODO: get exact local and remote file count
+
+        remote_package = sftp_path + '/' + pid + '/'
+        sftp.cwd(remote_package)
+
+        # Obtain structure
+        # directory_structure = sftp.listdir_attr()
+        remote_packages = sftp.listdir()
+        print(len(remote_packages))
+        # print(remote_packages)
+
+        if len(local_packages) == len(remote_packages):
+            return 'folders uploaded'
+
+        # Print data
+        # for attr in directory_structure:
+        #    print(attr.filename, attr)
+
+        return 'in_progress'

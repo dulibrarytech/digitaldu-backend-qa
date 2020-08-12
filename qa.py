@@ -1,6 +1,7 @@
 import os
 import json
 import qa_lib
+# import asyncio
 from flask import Flask, request
 from flask_cors import CORS
 from waitress import serve
@@ -47,6 +48,7 @@ def list_ready_folders():
 '''
 Runs QA on ready folder
 @param: api_key
+@param: folder
 @returns: Json
 '''
 @app.route('/api/v1/qa/run-qa', methods=['GET'])
@@ -84,6 +86,13 @@ def run_qa_on_ready():
 
     return json.dumps(results)
 
+
+'''
+Moves packages to ingest folder
+@param: api_key
+@param: folder
+@returns: Json
+'''
 @app.route('/api/v1/qa/move-to-ingest', methods=['GET'])
 def move_to_ingest():
 
@@ -94,16 +103,26 @@ def move_to_ingest():
     elif api_key != os.getenv('API_KEY'):
         return json.dumps(['Access denied.'])
 
+    pid = request.args.get('pid')
     folder = request.args.get('folder')
-    results = qa_lib.move_to_ingest(ready_path, ingest_path, folder)
+    errors = qa_lib.move_to_ingest(ready_path, ingest_path, pid, folder)
 
-    if len(results) > 0:
-        return json.dumps(dict(message='QA process failed.'))
+    if len(errors) > 0:
+        return json.dumps(dict(message='QA process failed.', errors=errors))
 
-    return json.dumps(dict(message='Packages moved to ingest folder'))
+    return json.dumps(dict(message='Packages moved to ingest folder', errors=errors))
 
+
+'''
+Uploads packges to Archivematica server
+@param: api_key
+@param: pid
+@param: folder
+@returns: Json
+'''
 @app.route('/api/v1/qa/move-to-sftp', methods=['GET'])
 def move_to_sftp():
+
     api_key = request.args.get('api_key')
 
     if api_key is None:
@@ -112,13 +131,40 @@ def move_to_sftp():
         return json.dumps(['Access denied.'])
 
     pid = request.args.get('pid')
-    folder = request.args.get('folder')
+    # folder = request.args.get('folder')
 
-    result = qa_lib.move_to_sftp(ingest_path, folder, pid)
-    print(result)
-    if len(result) > 0:
-        return json.dumps(dict(message='Package not uploaded to Archivematica sftp'))
-    else:
-        return json.dumps(dict(message='Package uploaded to Archivematica sftp'))
+    '''
+    async def move_to_sftp_async():
+        task = asyncio.create_task(qa_lib.move_to_sftp(ingest_path, folder, pid))
+        await task
+
+    asyncio.run(move_to_sftp_async())
+    '''
+
+    qa_lib.move_to_sftp(ingest_path, pid)
+
+    return json.dumps(dict(message='Uploading packages to Archivematica sftp'))
+
+
+'''
+Checks upload status of packages on Archivematica sftp
+@param: api_key
+@param: pid
+@returns: Json
+'''
+@app.route('/api/v1/qa/upload-status', methods=['GET'])
+def check_sftp():
+
+    api_key = request.args.get('api_key')
+
+    if api_key is None:
+        return json.dumps(['Access denied.'])
+    elif api_key != os.getenv('API_KEY'):
+        return json.dumps(['Access denied.'])
+
+    pid = request.args.get('pid')
+    results = qa_lib.check_sftp(ingest_path, pid)
+    print(results)
+    return json.dumps(dict(message='Checking packages on Archivematica sftp', data=results))
 
 serve(app, host='0.0.0.0', port=8080)
