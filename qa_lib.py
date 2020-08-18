@@ -64,6 +64,7 @@ Checks file names and fixes case issues and removes spaces
 def check_file_names(ready_path, folder):
 
     errors = []
+    files_arr = []
     packages = [f for f in os.listdir(ready_path + folder) if not f.startswith('.')]
 
     for i in packages:
@@ -71,12 +72,13 @@ def check_file_names(ready_path, folder):
         files = [f for f in os.listdir(package) if not f.startswith('.')]
         [os.remove(package + f) for f in os.listdir(package) if f.startswith('.')]
 
-        # print(files)
         if len(files) < 2:
             errors.append(i)
 
         for j in files:
-            print(j)
+
+            files_arr.append(j)
+
             if j.upper():
                 os.rename(package + j, package + j.lower().replace(' ', ''))
                 # check images here
@@ -87,7 +89,8 @@ def check_file_names(ready_path, folder):
                     if result.get('error') != False:
                         errors.append(result)
 
-    return errors
+    local_file_count = len(files_arr)
+    return dict(local_file_count=local_file_count, errors=errors)
 
 
 '''
@@ -208,11 +211,7 @@ def move_to_sftp(ingest_path, pid):
     with pysftp.Connection(host=host, username=username, password=password, cnopts=cnopts) as sftp:
 
         sftp.put_r(ingest_path, sftp_path, preserve_mtime=True)
-
-        # errors.append(f'ERROR; Unable to upload folder {pid}')
-
         packages = sftp.listdir()
-        print(packages)
 
         # TODO: get package count and compare after upload
         # TODO: log
@@ -228,39 +227,36 @@ checks upload on archivematica sftp
 @param: sftp_path
 @returns: Array
 '''
-def check_sftp(ingest_path, pid):
+def check_sftp(pid, local_file_count):
 
     host = os.getenv('SFTP_HOST')
     username = os.getenv('SFTP_ID')
     password = os.getenv('SFTP_PWD')
     cnopts = pysftp.CnOpts()
     sftp_path = os.getenv('SFTP_REMOTE_PATH')
-    # errors = []
+    file_names = []
+    dir_names = []
+    un_name = []
+
+    def store_files_name(fname):
+        file_names.append(fname)
+
+    def store_dir_name(dirname):
+        dir_names.append(dirname)
+
+    def store_other_file_types(name):
+        un_name.append(name)
 
     with pysftp.Connection(host=host, username=username, password=password, cnopts=cnopts) as sftp:
 
-        package = ingest_path + pid
-        print(package)
-
-        local_packages = [f for f in os.listdir(package) if not f.startswith('.')]
-        print(len(local_packages))
-
-        # TODO: get exact local and remote file count
-
         remote_package = sftp_path + '/' + pid + '/'
         sftp.cwd(remote_package)
+        sftp.walktree(remote_package, store_files_name, store_dir_name, store_other_file_types, recurse=True)
+        remote_file_count = len(file_names)
 
-        # Obtain structure
-        # directory_structure = sftp.listdir_attr()
-        remote_packages = sftp.listdir()
-        print(len(remote_packages))
-        # print(remote_packages)
+        if int(local_file_count) == remote_file_count:
+            # return 'upload_complete'
+            return dict(message='upload_complete', data=[file_names, remote_file_count])
 
-        if len(local_packages) == len(remote_packages):
-            return 'folders uploaded'
-
-        # Print data
-        # for attr in directory_structure:
-        #    print(attr.filename, attr)
-
-        return 'in_progress'
+        # return 'in_progress'
+        return dict(message='in_progress', data=[file_names, remote_file_count])
