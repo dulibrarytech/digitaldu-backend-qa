@@ -52,7 +52,11 @@ def check_package_names(ready_path, folder):
         package = ready_path + folder + '/'
 
         if i.upper():
-            os.rename(package + i, package + i.lower().replace(' ', ''))
+            # TODO: only lower case when not using call number format (check number of . in file name)
+            call_number = i.find('.')
+            print(call_number)
+            if call_number == -1:
+                os.rename(package + i, package + i.lower().replace(' ', ''))
 
 
 '''
@@ -80,7 +84,14 @@ def check_file_names(ready_path, folder):
             files_arr.append(j)
 
             if j.upper():
-                os.rename(package + j, package + j.lower().replace(' ', ''))
+
+                call_number = j.find('.')
+                print(call_number)
+                if call_number == -1:
+                    os.rename(package + j, package + j.lower().replace(' ', ''))
+                elif call_number != -1:
+                    os.rename(package + j, package + j.replace(' ', ''))
+
                 # check images here
                 file = package + j
                 if file.endswith('.tiff') or file.endswith('.tif') or file.endswith('.jpg') or file.endswith('.png'):
@@ -255,8 +266,6 @@ def check_sftp(pid, local_file_count):
         remote_file_count = len(file_names)
 
         if int(local_file_count) == remote_file_count:
-            # return 'upload_complete'
             return dict(message='upload_complete', data=[file_names, remote_file_count])
 
-        # return 'in_progress'
         return dict(message='in_progress', data=[file_names, remote_file_count])
