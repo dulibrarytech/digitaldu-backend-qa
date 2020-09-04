@@ -52,9 +52,8 @@ def check_package_names(ready_path, folder):
         package = ready_path + folder + '/'
 
         if i.upper():
-            # TODO: only lower case when not using call number format (check number of . in file name)
             call_number = i.find('.')
-            print(call_number)
+
             if call_number == -1:
                 os.rename(package + i, package + i.lower().replace(' ', ''))
 
@@ -86,7 +85,7 @@ def check_file_names(ready_path, folder):
             if j.upper():
 
                 call_number = j.find('.')
-                print(call_number)
+
                 if call_number == -1:
                     os.rename(package + j, package + j.lower().replace(' ', ''))
                 elif call_number != -1:
@@ -265,7 +264,14 @@ def check_sftp(pid, local_file_count):
         sftp.walktree(remote_package, store_files_name, store_dir_name, store_other_file_types, recurse=True)
         remote_file_count = len(file_names)
 
+        with sftp.cd(remote_package):
+            remote_package_size = sftp.execute('du -h -s')
+            # TODO: compare local and remote file sizes
+            # print('remote package size: ')
+            # print(remote_package_size)
+
         if int(local_file_count) == remote_file_count:
+
             return dict(message='upload_complete', data=[file_names, remote_file_count])
 
         return dict(message='in_progress', data=[file_names, remote_file_count])
