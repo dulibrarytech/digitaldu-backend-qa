@@ -1,7 +1,8 @@
 import os
 import shutil
-import pysftp
 import time
+
+import pysftp
 from PIL import Image
 
 '''
@@ -9,8 +10,9 @@ Checks if folder name conforms to naming standard
 @param: folder
 @returns: Array
 '''
-def check_folder_name(folder):
 
+
+def check_folder_name(folder):
     errors = []
 
     if folder.find('new_') == -1:
@@ -40,8 +42,9 @@ Checks package names and fixes case issues and removes spaces
 @param: folder
 @returns: void
 '''
-def check_package_names(ready_path, folder):
 
+
+def check_package_names(ready_path, folder):
     packages = [f for f in os.listdir(ready_path + folder) if not f.startswith('.')]
     [os.remove(ready_path + folder + '/' + f) for f in os.listdir(ready_path + folder) if f.startswith('.')]
 
@@ -64,8 +67,9 @@ Checks file names and fixes case issues and removes spaces
 @param: folder
 @returns: Array
 '''
-def check_file_names(ready_path, folder):
 
+
+def check_file_names(ready_path, folder):
     errors = []
     files_arr = []
     packages = [f for f in os.listdir(ready_path + folder) if not f.startswith('.')]
@@ -109,14 +113,15 @@ Checks image files to determine if they are broken/corrupt
 @param: file_name
 @returns: Object
 '''
-def check_image_file(full_path, file_name):
 
+
+def check_image_file(full_path, file_name):
     try:
         img = Image.open(full_path)
-        img.verify() # confirm that file is an image
+        img.verify()  # confirm that file is an image
         img.close()
         img = Image.open(full_path)
-        img.transpose(Image.FLIP_LEFT_RIGHT) # attempt to manipulate file to determine if it's broken
+        img.transpose(Image.FLIP_LEFT_RIGHT)  # attempt to manipulate file to determine if it's broken
         img.close()
         return dict(error=False, file='')
     except OSError as error:
@@ -129,8 +134,9 @@ Checks for missing uri.txt files
 @param: folder
 @returns: Array
 '''
-def check_uri_txt(ready_path, folder):
 
+
+def check_uri_txt(ready_path, folder):
     errors = []
     packages = [f for f in os.listdir(ready_path + folder) if not f.startswith('.')]
 
@@ -154,8 +160,9 @@ Checks package file size (bytes)
 @returns: Integer
 https://stackoverflow.com/questions/1392413/calculating-a-directorys-size-using-python
 '''
-def get_package_size(ready_path, folder):
 
+
+def get_package_size(ready_path, folder):
     package = ready_path + folder
     total_size = 0
     for dirpath, dirnames, filenames in os.walk(package):
@@ -175,8 +182,9 @@ Moves folder from ready to ingest folder and renames it using pid
 @param: folder
 @returns: String (if there is an error)
 '''
-def move_to_ingest(ready_path, ingest_path, pid, folder):
 
+
+def move_to_ingest(ready_path, ingest_path, pid, folder):
     errors = []
     mode = 0o666
 
@@ -209,8 +217,9 @@ Moves folder to archivematica sftp
 @param: sftp_path
 @returns: void
 '''
-def move_to_sftp(ingest_path, pid):
 
+
+def move_to_sftp(ingest_path, pid):
     host = os.getenv('SFTP_HOST')
     username = os.getenv('SFTP_ID')
     password = os.getenv('SFTP_PWD')
@@ -219,7 +228,6 @@ def move_to_sftp(ingest_path, pid):
     errors = []
 
     with pysftp.Connection(host=host, username=username, password=password, cnopts=cnopts) as sftp:
-
         sftp.put_r(ingest_path, sftp_path, preserve_mtime=True)
         packages = sftp.listdir()
 
@@ -237,8 +245,9 @@ checks upload on archivematica sftp
 @param: sftp_path
 @returns: Array
 '''
-def check_sftp(pid, local_file_count):
 
+
+def check_sftp(pid, local_file_count):
     host = os.getenv('SFTP_HOST')
     username = os.getenv('SFTP_ID')
     password = os.getenv('SFTP_PWD')
@@ -258,7 +267,6 @@ def check_sftp(pid, local_file_count):
         un_name.append(name)
 
     with pysftp.Connection(host=host, username=username, password=password, cnopts=cnopts) as sftp:
-
         remote_package = sftp_path + '/' + pid + '/'
         sftp.cwd(remote_package)
         sftp.walktree(remote_package, store_files_name, store_dir_name, store_other_file_types, recurse=True)
@@ -271,7 +279,6 @@ def check_sftp(pid, local_file_count):
             # print(remote_package_size)
 
         if int(local_file_count) == remote_file_count:
-
             return dict(message='upload_complete', data=[file_names, remote_file_count])
 
         return dict(message='in_progress', data=[file_names, remote_file_count])
