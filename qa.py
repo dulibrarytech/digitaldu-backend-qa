@@ -70,9 +70,8 @@ def run_qa_on_ready():
     errors = qa_lib.check_folder_name(folder)
 
     if len(errors) > 0:
-        # result = dict(file_results=[], message=f'"{folder}". Please review the ingest documentation for folder naming convention.', errors=errors)
-        result = dict(file_results=[], message='Please review the ingest documentation for folder naming convention.',
-                      errors=errors)
+        result = dict(file_results=[], message=f'"{folder}". Please review the ingest documentation for folder naming convention.', errors=errors)
+        # result = dict(file_results=[], message='Please review the ingest documentation for folder naming convention.', errors=errors)
         return json.dumps(result)
 
     errors = qa_lib.check_package_names(ready_path, folder)

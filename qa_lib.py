@@ -6,11 +6,18 @@ import pysftp
 from PIL import Image
 
 '''
+ TODO: Move folders from 002-ingest to 003-ingested 
+ example:
+ sudo cp -R . /library/lib-sftp/003-ingested/P005_University_of_Denver_Clarion-resources_1194/
+ sudo rm -R <sip_uuid>
+
+'''
+
+'''
 Checks if folder name conforms to naming standard
 @param: folder
 @returns: Array
 '''
-
 
 def check_folder_name(folder):
     errors = []
@@ -225,6 +232,7 @@ def move_to_sftp(ingest_path, pid):
     password = os.getenv('SFTP_PWD')
     sftp_path = os.getenv('SFTP_REMOTE_PATH')
     cnopts = pysftp.CnOpts()
+    cnopts.hostkeys = None
     errors = []
 
     with pysftp.Connection(host=host, username=username, password=password, cnopts=cnopts) as sftp:
