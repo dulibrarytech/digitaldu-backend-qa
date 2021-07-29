@@ -260,6 +260,7 @@ def check_sftp(pid, local_file_count):
     username = os.getenv('SFTP_ID')
     password = os.getenv('SFTP_PWD')
     cnopts = pysftp.CnOpts()
+    cnopts.hostkeys = None
     sftp_path = os.getenv('SFTP_REMOTE_PATH')
     file_names = []
     dir_names = []
