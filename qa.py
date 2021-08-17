@@ -45,9 +45,17 @@ def list_ready_folders():
     elif api_key != os.getenv('API_KEY'):
         return json.dumps(['Access denied.'])
 
+    ready_list = {}
     folders = [f for f in os.listdir(ready_path) if not f.startswith('.')]
-    return json.dumps(folders)
 
+    for folder in folders:
+
+        package_count = len([name for name in os.listdir(ready_path + folder) if os.path.isdir(os.path.join(ready_path + folder, name))])
+
+        if package_count > 0:
+            ready_list[folder] = package_count
+
+    return json.dumps(ready_list)
 
 '''
 Runs QA on ready folder

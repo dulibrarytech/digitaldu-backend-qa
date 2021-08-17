@@ -10,7 +10,7 @@ from PIL import Image
  example:
  sudo cp -R . /library/lib-sftp/003-ingested/P005_University_of_Denver_Clarion-resources_1194/
  sudo rm -R <sip_uuid>
-
+ sudo cp -R . /library/lib-sftp/001-ready/new_000_qa_test-resources_496/
 '''
 
 '''
@@ -284,8 +284,8 @@ def check_sftp(pid, local_file_count):
         with sftp.cd(remote_package):
             remote_package_size = sftp.execute('du -h -s')
             # TODO: compare local and remote file sizes
-            # print('remote package size: ')
-            # print(remote_package_size)
+            print('remote package size: ')
+            print(remote_package_size)
 
         if int(local_file_count) == remote_file_count:
             return dict(message='upload_complete', data=[file_names, remote_file_count])
