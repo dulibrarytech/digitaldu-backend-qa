@@ -26,7 +26,7 @@ Renders QA API Information
 
 @app.route('/', methods=['GET'])
 def index():
-    return 'DigitalDU-QA v0.1.0'
+    return 'DigitalDU-QA v0.5.0'
 
 
 '''
@@ -50,12 +50,14 @@ def list_ready_folders():
 
     for folder in folders:
 
-        package_count = len([name for name in os.listdir(ready_path + folder) if os.path.isdir(os.path.join(ready_path + folder, name))])
+        package_count = len([name for name in os.listdir(ready_path + folder) if
+                             os.path.isdir(os.path.join(ready_path + folder, name))])
 
         if package_count > 0:
             ready_list[folder] = package_count
 
     return json.dumps(ready_list)
+
 
 '''
 Runs QA on ready folder
@@ -78,14 +80,14 @@ def run_qa_on_ready():
     errors = qa_lib.check_folder_name(folder)
 
     if len(errors) > 0:
-        result = dict(file_results=[], message=f'"{folder}". Please review the ingest documentation for folder naming convention.', errors=errors)
-        # result = dict(file_results=[], message='Please review the ingest documentation for folder naming convention.', errors=errors)
+        result = dict(file_results=[],
+                      message=f'"{folder}". Please review the ingest documentation for folder naming convention.',
+                      errors=errors)
         return json.dumps(result)
 
     errors = qa_lib.check_package_names(ready_path, folder)
 
     if errors == -1:
-        # response = dict(file_results=[], message=f'There are no packages in "{folder}".', errors=['Folder is empty'])
         response = dict(file_results=[], message='There are no packages in the current folder.',
                         errors=['Folder is empty'])
         return json.dumps(response)

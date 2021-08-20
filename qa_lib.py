@@ -19,6 +19,7 @@ Checks if folder name conforms to naming standard
 @returns: Array
 '''
 
+
 def check_folder_name(folder):
     errors = []
 
@@ -135,6 +136,17 @@ def check_image_file(full_path, file_name):
         return dict(error=str(error), file=file_name)
 
 
+# TODO: check pdf sizes
+def check_pdf_file():
+    try:
+        print('test')
+
+    except OSError as error:
+        return 'return'
+
+
+# TODO: check dates (start/end) in archivesspace record
+
 '''
 Checks for missing uri.txt files
 @param: ready_path
@@ -239,8 +251,6 @@ def move_to_sftp(ingest_path, pid):
         sftp.put_r(ingest_path, sftp_path, preserve_mtime=True)
         packages = sftp.listdir()
 
-        # TODO: get package count and compare after upload
-        # TODO: log
         if pid not in packages:
             errors.append(-1)
 
@@ -283,11 +293,10 @@ def check_sftp(pid, local_file_count):
 
         with sftp.cd(remote_package):
             remote_package_size = sftp.execute('du -h -s')
-            # TODO: compare local and remote file sizes
-            print('remote package size: ')
-            print(remote_package_size)
 
         if int(local_file_count) == remote_file_count:
             return dict(message='upload_complete', data=[file_names, remote_file_count])
 
-        return dict(message='in_progress', data=[file_names, remote_file_count])
+        return dict(message='in_progress', file_names=file_names, remote_file_count=remote_file_count,
+                    local_file_count=local_file_count,
+                    remote_package_size=remote_package_size[0].decode().strip().replace('\t', ''))
