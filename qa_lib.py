@@ -111,6 +111,14 @@ def check_file_names(ready_path, folder):
                     if result.get('error') != False:
                         errors.append(result)
 
+                # check pdfs here
+                file = package + j
+                if file.endswith('.pdf'):
+                    result = check_pdf_file(file, j)
+
+                    if result.get('error') != False:
+                        errors.append(result)
+
     local_file_count = len(files_arr)
     return dict(local_file_count=local_file_count, errors=errors)
 
@@ -136,16 +144,21 @@ def check_image_file(full_path, file_name):
         return dict(error=str(error), file=file_name)
 
 
-# TODO: check pdf sizes
-def check_pdf_file():
+def check_pdf_file(full_path, file_name):
     try:
-        print('test')
+        print(full_path)
+        print(file_name)
+        # reject anything over 900mb
+        # https://stackoverflow.com/questions/2104080/how-can-i-check-file-size-in-python
+        # i.e. Path('somefile.txt').stat().st_size
+
+        return dict(error=False, file='')
 
     except OSError as error:
-        return 'return'
+        return dict(error=str(error), file=file_name)
 
 
-# TODO: check dates (start/end) in archivesspace record
+# TODO: check dates (start/end) in archivesspace record // check on client side?
 
 '''
 Checks for missing uri.txt files

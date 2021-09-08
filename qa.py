@@ -26,7 +26,7 @@ Renders QA API Information
 
 @app.route('/', methods=['GET'])
 def index():
-    return 'DigitalDU-QA v0.5.0'
+    return 'DigitalDU-QA v0.6.0'
 
 
 '''
