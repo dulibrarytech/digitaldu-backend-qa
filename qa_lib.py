@@ -146,9 +146,9 @@ def check_image_file(full_path, file_name):
 
 def check_pdf_file(full_path, file_name):
     try:
-        print(full_path)
-        print(file_name)
-        # reject anything over 900mb
+        # print(full_path)
+        # print(file_name)
+        # TODO: reject anything over 900mb
         # https://stackoverflow.com/questions/2104080/how-can-i-check-file-size-in-python
         # i.e. Path('somefile.txt').stat().st_size
 
