@@ -9,7 +9,6 @@ from PIL import Image
  TODO: Move folders from 002-ingest to 003-ingested 
  example:
  sudo cp -R . /library/lib-sftp/003-ingested/P005_University_of_Denver_Clarion-resources_1194/
- sudo rm -R <sip_uuid>
  sudo cp -R . /library/lib-sftp/001-ready/new_000_qa_test-resources_496/
 '''
 

@@ -26,7 +26,7 @@ Renders QA API Information
 
 @app.route('/', methods=['GET'])
 def index():
-    return 'DigitalDU-QA v0.6.0'
+    return 'DigitalDU-QA v0.7.0'
 
 
 '''
@@ -41,9 +41,9 @@ def list_ready_folders():
     api_key = request.args.get('api_key')
 
     if api_key is None:
-        return json.dumps(['Access denied.'])
+        return json.dumps(['Access denied.']), 403
     elif api_key != os.getenv('API_KEY'):
-        return json.dumps(['Access denied.'])
+        return json.dumps(['Access denied.']), 403
 
     ready_list = {}
     folders = [f for f in os.listdir(ready_path) if not f.startswith('.')]
@@ -56,7 +56,7 @@ def list_ready_folders():
         if package_count > 0:
             ready_list[folder] = package_count
 
-    return json.dumps(ready_list)
+    return json.dumps(ready_list), 200
 
 
 '''
@@ -72,9 +72,9 @@ def run_qa_on_ready():
     api_key = request.args.get('api_key')
 
     if api_key is None:
-        return json.dumps(['Access denied.'])
+        return json.dumps(['Access denied.']), 403
     elif api_key != os.getenv('API_KEY'):
-        return json.dumps(['Access denied.'])
+        return json.dumps(['Access denied.']), 403
 
     folder = request.args.get('folder')
     errors = qa_lib.check_folder_name(folder)
@@ -83,14 +83,14 @@ def run_qa_on_ready():
         result = dict(file_results=[],
                       message=f'"{folder}". Please review the ingest documentation for folder naming convention.',
                       errors=errors)
-        return json.dumps(result)
+        return json.dumps(result), 200
 
     errors = qa_lib.check_package_names(ready_path, folder)
 
     if errors == -1:
         response = dict(file_results=[], message='There are no packages in the current folder.',
                         errors=['Folder is empty'])
-        return json.dumps(response)
+        return json.dumps(response), 200
 
     file_results = qa_lib.check_file_names(ready_path, folder)
 
@@ -103,7 +103,7 @@ def run_qa_on_ready():
 
     results = dict(file_results=file_results, uri_errors=uri_errors, total_size=total_size, message='Package results')
 
-    return json.dumps(results)
+    return json.dumps(results), 200
 
 
 '''
@@ -119,18 +119,18 @@ def move_to_ingest():
     api_key = request.args.get('api_key')
 
     if api_key is None:
-        return json.dumps(['Access denied.'])
+        return json.dumps(['Access denied.']), 403
     elif api_key != os.getenv('API_KEY'):
-        return json.dumps(['Access denied.'])
+        return json.dumps(['Access denied.']), 403
 
     pid = request.args.get('pid')
     folder = request.args.get('folder')
     errors = qa_lib.move_to_ingest(ready_path, ingest_path, pid, folder)
 
     if len(errors) > 0:
-        return json.dumps(dict(message='QA process failed.', errors=errors))
+        return json.dumps(dict(message='QA process failed.', errors=errors)), 200
 
-    return json.dumps(dict(message='Packages moved to ingest folder', errors=errors))
+    return json.dumps(dict(message='Packages moved to ingest folder', errors=errors)), 200
 
 
 '''
@@ -147,14 +147,14 @@ def move_to_sftp():
     api_key = request.args.get('api_key')
 
     if api_key is None:
-        return json.dumps(['Access denied.'])
+        return json.dumps(['Access denied.']), 403
     elif api_key != os.getenv('API_KEY'):
-        return json.dumps(['Access denied.'])
+        return json.dumps(['Access denied.']), 403
 
     pid = request.args.get('pid')
     qa_lib.move_to_sftp(ingest_path, pid)
 
-    return json.dumps(dict(message='Uploading packages to Archivematica sftp'))
+    return json.dumps(dict(message='Uploading packages to Archivematica sftp')), 200
 
 
 '''
@@ -170,19 +170,19 @@ def check_sftp():
     api_key = request.args.get('api_key')
 
     if api_key is None:
-        return json.dumps(['Access denied.'])
+        return json.dumps(['Access denied.']), 403
     elif api_key != os.getenv('API_KEY'):
-        return json.dumps(['Access denied.'])
+        return json.dumps(['Access denied.']), 403
 
     pid = request.args.get('pid')
     local_file_count = request.args.get('local_file_count')
 
     if local_file_count == None:
         print('file count response none')
-        return json.dumps(dict(message='File count not found.', data=[]))
+        return json.dumps(dict(message='File count not found.', data=[])), 200
 
     results = qa_lib.check_sftp(pid, local_file_count)
-    return json.dumps(results)
+    return json.dumps(results), 200
 
 
 serve(app, host='0.0.0.0', port=8080)
