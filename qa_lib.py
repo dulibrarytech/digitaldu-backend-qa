@@ -215,9 +215,10 @@ Moves folder from ready to ingest folder and renames it using pid
 '''
 
 
-def move_to_ingest(ready_path, ingest_path, pid, folder):
+def move_to_ingest(ready_path, ingest_path, pid, folder, uid, gid):
     errors = []
-    mode = 0o666
+    # mode = 0o666
+    mode = 0o777
 
     try:
         shutil.move(ready_path + folder, ingest_path + folder)
@@ -226,7 +227,7 @@ def move_to_ingest(ready_path, ingest_path, pid, folder):
 
     # TODO: calculate time based on size of collection
     time.sleep(15.0)
-
+    # new_B002_Jewish_Consumptives_Relief_Society_Records-resources_496
     try:
         os.rename(ingest_path + folder, ingest_path + pid)
     except:
@@ -236,6 +237,11 @@ def move_to_ingest(ready_path, ingest_path, pid, folder):
         os.mkdir(ready_path + folder, mode)
     except:
         return errors.append('ERROR: Unable to create folder (move_to_ingest)')
+
+    # try: TODO: 500 error
+        # os.chown(ready_path + folder, uid, gid)
+    # except:
+    #    return errors.append('ERROR: Unable to change folder permissions (move_to_ingest)')
 
     return errors
 
@@ -312,3 +318,36 @@ def check_sftp(pid, local_file_count):
         return dict(message='in_progress', file_names=file_names, remote_file_count=remote_file_count,
                     local_file_count=local_file_count,
                     remote_package_size=remote_package_size[0].decode().strip().replace('\t', ''))
+
+
+def move_to_ingested(ingest_path, ingested_path, pid, folder):
+
+    errors = []
+    ingested = ingested_path + folder.replace('new_', '')
+    exists = os.path.isdir(ingested)
+
+    if exists:
+
+        try: # move only files because folder already exists
+            file_names = [f for f in os.listdir(ingest_path + pid) if not f.startswith('.')]
+
+            for file_name in file_names:
+                shutil.move(os.path.join(ingest_path + pid, file_name), ingested)
+
+            time.sleep(5.0)
+            shutil.rmtree(ingest_path + pid)
+
+        except:
+            return errors.append('ERROR: Unable to move files to ingested folder (move_to_ingested)')
+
+    else: # move entire folder
+
+        try:
+            shutil.move(ingest_path + pid, ingested)
+        except:
+            return errors.append('ERROR: Unable to move folder (move_to_ingested)')
+
+    if len(errors) == 0:
+        return ['Packages moved to ingested folder']
+    else:
+        return errors

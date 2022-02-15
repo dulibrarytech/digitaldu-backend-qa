@@ -14,6 +14,10 @@ load_dotenv(dotenv_path)
 
 ready_path = os.getenv('READY_PATH')
 ingest_path = os.getenv('INGEST_PATH')
+ingested_path = os.getenv('INGESTED_PATH')
+s3_path = os.getenv('S3_PATH')
+uid = os.getenv('UID')
+gid = os.getenv('GID')
 
 app = Flask(__name__)
 cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
@@ -125,7 +129,7 @@ def move_to_ingest():
 
     pid = request.args.get('pid')
     folder = request.args.get('folder')
-    errors = qa_lib.move_to_ingest(ready_path, ingest_path, pid, folder)
+    errors = qa_lib.move_to_ingest(ready_path, ingest_path, pid, folder, uid, gid)
 
     if len(errors) > 0:
         return json.dumps(dict(message='QA process failed.', errors=errors)), 200
@@ -183,6 +187,31 @@ def check_sftp():
 
     results = qa_lib.check_sftp(pid, local_file_count)
     return json.dumps(results), 200
+
+
+@app.route('/api/v1/qa/move-to-ingested', methods=['GET'])
+def move_to_ingested():
+    api_key = request.args.get('api_key')
+    folder = request.args.get('folder')
+    pid = request.args.get('pid')
+
+    if api_key is None:
+        return json.dumps(['Access denied.']), 403
+    elif api_key != os.getenv('API_KEY'):
+        return json.dumps(['Access denied.']), 403
+
+    results = qa_lib.move_to_ingested(ingest_path, ingested_path, pid, folder)
+    return json.dumps(results), 200
+
+
+@app.route('/api/v1/qa/move-to-s3', methods=['GET'])
+def move_to_s3():
+    api_key = request.args.get('api_key')
+
+    if api_key is None:
+        return json.dumps(['Access denied.']), 403
+    elif api_key != os.getenv('API_KEY'):
+        return json.dumps(['Access denied.']), 403
 
 
 serve(app, host='0.0.0.0', port=8080)
