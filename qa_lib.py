@@ -217,7 +217,6 @@ Moves folder from ready to ingest folder and renames it using pid
 
 def move_to_ingest(ready_path, ingest_path, pid, folder, uid, gid):
     errors = []
-    # mode = 0o666
     mode = 0o777
 
     try:
@@ -226,8 +225,8 @@ def move_to_ingest(ready_path, ingest_path, pid, folder, uid, gid):
         return errors.append('ERROR: Unable to move folder (move_to_ingest)')
 
     # TODO: calculate time based on size of collection
-    time.sleep(15.0)
-    # new_B002_Jewish_Consumptives_Relief_Society_Records-resources_496
+    # time.sleep(15.0)
+
     try:
         os.rename(ingest_path + folder, ingest_path + pid)
     except:
@@ -237,11 +236,6 @@ def move_to_ingest(ready_path, ingest_path, pid, folder, uid, gid):
         os.mkdir(ready_path + folder, mode)
     except:
         return errors.append('ERROR: Unable to create folder (move_to_ingest)')
-
-    # try: TODO: 500 error
-        # os.chown(ready_path + folder, uid, gid)
-    # except:
-    #    return errors.append('ERROR: Unable to change folder permissions (move_to_ingest)')
 
     return errors
 
@@ -325,6 +319,9 @@ def move_to_ingested(ingest_path, ingested_path, pid, folder):
     errors = []
     ingested = ingested_path + folder.replace('new_', '')
     exists = os.path.isdir(ingested)
+    wasabi_endpoint = os.getenv('WASABI_ENDPOINT')
+    wasabi_bucket = os.getenv('WASABI_BUCKET')
+    wasabi_profile = os.getenv('WASABI_PROFILE')
 
     if exists:
 
@@ -332,10 +329,18 @@ def move_to_ingested(ingest_path, ingested_path, pid, folder):
             file_names = [f for f in os.listdir(ingest_path + pid) if not f.startswith('.')]
 
             for file_name in file_names:
-                shutil.move(os.path.join(ingest_path + pid, file_name), ingested)
+                shutil.copy(os.path.join(ingest_path + pid, file_name), ingested)
 
-            time.sleep(5.0)
-            shutil.rmtree(ingest_path + pid)
+            source = ingest_path + pid + '/'
+            aws_exec = '/usr/local/bin/aws s3 cp'
+            aws_endpoint = '--endpoint-url=' + wasabi_endpoint
+            aws_bucket = wasabi_bucket
+            aws_args = '--recursive --profile ' + wasabi_profile
+            aws_cmd = aws_exec + ' ' + source + aws_endpoint + ' ' + aws_bucket + ingested + '/ ' + aws_args
+            print(aws_cmd)
+
+            # TODO: try catch
+            os.system(aws_cmd)
 
         except:
             return errors.append('ERROR: Unable to move files to ingested folder (move_to_ingested)')
@@ -343,11 +348,56 @@ def move_to_ingested(ingest_path, ingested_path, pid, folder):
     else: # move entire folder
 
         try:
-            shutil.move(ingest_path + pid, ingested)
+            shutil.copy(ingest_path + pid, ingested)
+
+            source = ingest_path
+            aws_exec = '/usr/local/bin/aws s3 cp'
+            aws_endpoint = '--endpoint-url=' + wasabi_endpoint
+            aws_bucket = wasabi_bucket
+            aws_args = '--recursive --profile ' + wasabi_profile
+            aws_cmd = aws_exec + ' ' + source + aws_endpoint + ' ' + aws_bucket + ingested + '/ ' + aws_args
+            print(aws_cmd)
+
         except:
             return errors.append('ERROR: Unable to move folder (move_to_ingested)')
 
     if len(errors) == 0:
+        shutil.rmtree(ingest_path + pid)
         return ['Packages moved to ingested folder']
     else:
         return errors
+
+
+def clean_up_sftp(pid):
+    host = os.getenv('SFTP_HOST')
+    username = os.getenv('SFTP_ID')
+    password = os.getenv('SFTP_PWD')
+    cnopts = pysftp.CnOpts()
+    cnopts.hostkeys = None
+    sftp_path = os.getenv('SFTP_REMOTE_PATH')
+    '''
+    file_names = []
+    dir_names = []
+    un_name = []
+
+    def store_files_name(fname):
+        file_names.append(fname)
+
+    def store_dir_name(dirname):
+        dir_names.append(dirname)
+
+    def store_other_file_types(name):
+        un_name.append(name)
+    '''
+    with pysftp.Connection(host=host, username=username, password=password, cnopts=cnopts) as sftp:
+        print(sftp_path)
+        sftp.cwd(sftp_path)
+        package_deleted = sftp.execute('rm -R ' + pid)
+        print(package_deleted)
+        # sftp.walktree(remote_package, store_files_name, store_dir_name, store_other_file_types, recurse=True)
+        # remote_file_count = len(file_names)
+        # with sftp.execute('rm -R ' + pid):
+        # with sftp.cd(remote_package):
+        #    package_deleted = sftp.execute('rm -R ' + pid)
+
+        return dict(message='in_progress', file_names=file_names, remote_file_count=remote_file_count)
