@@ -215,7 +215,7 @@ Moves folder from ready to ingest folder and renames it using pid
 '''
 
 
-def move_to_ingest(ready_path, ingest_path, pid, folder, uid, gid):
+def move_to_ingest(ready_path, ingest_path, pid, folder):
     errors = []
     mode = 0o777
 
