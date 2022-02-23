@@ -126,7 +126,7 @@ def move_to_ingest():
 
     pid = request.args.get('pid')
     folder = request.args.get('folder')
-    errors = qa_lib.move_to_ingest(ready_path, ingest_path, pid, folder, uid, gid)
+    errors = qa_lib.move_to_ingest(ready_path, ingest_path, pid, folder)
 
     if len(errors) > 0:
         return json.dumps(dict(message='QA process failed.', errors=errors)), 200
