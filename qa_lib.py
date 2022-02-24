@@ -319,55 +319,57 @@ def move_to_ingested(ingest_path, ingested_path, pid, folder):
     errors = []
     ingested = ingested_path + folder.replace('new_', '')
     exists = os.path.isdir(ingested)
-    wasabi_endpoint = os.getenv('WASABI_ENDPOINT')
-    wasabi_bucket = os.getenv('WASABI_BUCKET')
-    wasabi_profile = os.getenv('WASABI_PROFILE')
+    # TODO: move to a "cleanup" function shutil.rmtree(ingest_path + folder.replace('new_', ''))
 
     if exists:
 
-        try: # move only files because folder already exists
+        try: # move only files because collection folder already exists
             file_names = [f for f in os.listdir(ingest_path + pid) if not f.startswith('.')]
 
             for file_name in file_names:
-                shutil.copy(os.path.join(ingest_path + pid, file_name), ingested)
+                os.system('cp -R ' + os.path.join(ingest_path + pid, file_name) + ' ' + ingested)
 
             source = ingest_path + pid + '/'
-            aws_exec = '/usr/local/bin/aws s3 cp'
-            aws_endpoint = '--endpoint-url=' + wasabi_endpoint
-            aws_bucket = wasabi_bucket
-            aws_args = '--recursive --profile ' + wasabi_profile
-            aws_cmd = aws_exec + ' ' + source + aws_endpoint + ' ' + aws_bucket + ingested + '/ ' + aws_args
-            print(aws_cmd)
-
-            # TODO: try catch
-            os.system(aws_cmd)
-
+            move_to_s3(source, folder.replace('new_', ''))
         except:
             return errors.append('ERROR: Unable to move files to ingested folder (move_to_ingested)')
 
     else: # move entire folder
 
         try:
-            shutil.copy(ingest_path + pid, ingested)
-
+            shutil.move(ingest_path + pid, ingest_path + folder.replace('new_', ''))
+            os.system('cp -R ' + ingest_path + folder.replace('new_', '') + ' ' + ingested)
             source = ingest_path
-            aws_exec = '/usr/local/bin/aws s3 cp'
-            aws_endpoint = '--endpoint-url=' + wasabi_endpoint
-            aws_bucket = wasabi_bucket
-            aws_args = '--recursive --profile ' + wasabi_profile
-            aws_cmd = aws_exec + ' ' + source + aws_endpoint + ' ' + aws_bucket + ingested + '/ ' + aws_args
-            print(aws_cmd)
-
+            move_to_s3(source, '')
         except:
             return errors.append('ERROR: Unable to move folder (move_to_ingested)')
 
     if len(errors) == 0:
-        shutil.rmtree(ingest_path + pid)
         return ['Packages moved to ingested folder']
     else:
         return errors
 
 
+def move_to_s3(source, folder):
+
+    wasabi_endpoint = os.getenv('WASABI_ENDPOINT')
+    wasabi_bucket = os.getenv('WASABI_BUCKET')
+    wasabi_profile = os.getenv('WASABI_PROFILE')
+
+    aws_exec = '/usr/local/bin/aws s3 cp'
+    aws_endpoint = '--endpoint-url=' + wasabi_endpoint
+    aws_bucket = wasabi_bucket
+    aws_args = '--recursive --profile ' + wasabi_profile
+
+    if folder != '':
+        aws_cmd = aws_exec + ' ' + source + ' ' + aws_endpoint + ' ' + aws_bucket + folder + ' ' + aws_args
+        os.system(aws_cmd)
+    else:
+        aws_cmd = aws_exec + ' ' + source + ' ' + aws_endpoint + ' ' + aws_bucket + ' ' + aws_args
+        os.system(aws_cmd)
+
+
+# TODO
 def clean_up_sftp(pid):
     host = os.getenv('SFTP_HOST')
     username = os.getenv('SFTP_ID')
