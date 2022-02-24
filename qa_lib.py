@@ -337,7 +337,8 @@ def move_to_ingested(ingest_path, ingested_path, pid, folder):
     else: # move entire folder
 
         try:
-            shutil.move(ingest_path + pid, ingest_path + folder.replace('new_', ''))
+            # shutil.move(ingest_path + pid, ingest_path + folder.replace('new_', ''))
+            print('cp -R ' + ingest_path + folder.replace('new_', '') + ' ' + ingested)
             os.system('cp -R ' + ingest_path + folder.replace('new_', '') + ' ' + ingested)
             source = ingest_path
             move_to_s3(source, '')
