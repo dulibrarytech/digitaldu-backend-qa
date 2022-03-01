@@ -16,6 +16,26 @@ wasabi_bucket = os.getenv('WASABI_BUCKET')
 wasabi_profile = os.getenv('WASABI_PROFILE')
 
 
+def get_ready_folders():
+    """
+    Gets ready folders
+    @param: folder
+    """
+
+    ready_list = {}
+    folders = [f for f in os.listdir(ready_path) if not f.startswith('.')]
+
+    for folder in folders:
+
+        package_count = len([name for name in os.listdir(ready_path + folder) if
+                             os.path.isdir(os.path.join(ready_path + folder, name))])
+
+        if package_count > 0:
+            ready_list[folder] = package_count
+
+    return ready_list
+
+
 def check_folder_name(folder):
     """
     Checks if folder name conforms to naming standard
