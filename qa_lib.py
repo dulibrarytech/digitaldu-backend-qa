@@ -1,7 +1,6 @@
 import os
 import shutil
 import time
-
 import pysftp
 from PIL import Image
 
@@ -41,10 +40,7 @@ def check_folder_name(folder):
     if is_id == False:
         errors.append('Folder is missing "URI" part')
 
-    if len(errors) > 0:
-        return errors
-    else:
-        return []
+    return errors
 
 
 def check_package_names(folder):
