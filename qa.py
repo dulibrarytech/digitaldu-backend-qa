@@ -69,30 +69,19 @@ def run_qa_on_ready():
     if folder is None:
         return json.dumps(['Bad Request: Missing folder param']), 400
 
-    errors = qa_lib.check_folder_name(folder)
-
-    if len(errors) > 0:
-        result = dict(file_results=[],
-                      message=f'"{folder}". Please review the ingest documentation for folder naming convention.',
-                      errors=errors)
-        return json.dumps(result), 200
-
-    errors = qa_lib.check_package_names(folder)
-
-    if errors == -1:
-        response = dict(file_results=[], message='There are no packages in the current folder.',
-                        errors=['Folder is empty'])
-        return json.dumps(response), 200
-
+    package_name_errors = qa_lib.check_package_names(folder)
+    folder_name_errors = qa_lib.check_folder_name(folder)
     file_results = qa_lib.check_file_names(folder)
     uri_errors = qa_lib.check_uri_txt(folder)
     total_size = qa_lib.get_package_size(folder)
 
-    if total_size > batch_size_limit:
-        # TODO: inform user to use smaller batch loads
-        print('Split up packages')
-
-    results = dict(file_results=file_results, uri_errors=uri_errors, total_size=total_size, message='Package results')
+    results = dict(
+        package_name_errors=package_name_errors,
+        folder_name_errors=folder_name_errors,
+        file_results=file_results,
+        uri_errors=uri_errors,
+        total_size=total_size
+    )
 
     return json.dumps(results), 200
 

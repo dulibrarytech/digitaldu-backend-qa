@@ -384,6 +384,7 @@ def move_to_s3(source, folder):
         aws_cmd = aws_exec + ' ' + source + ' ' + aws_endpoint + ' ' + aws_bucket + ' ' + aws_args
         os.system(aws_cmd)
 
+    # TODO: call cleanup function here
 
 # TODO
 def clean_up_sftp(pid):
