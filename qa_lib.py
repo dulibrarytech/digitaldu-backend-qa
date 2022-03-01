@@ -5,21 +5,25 @@ import time
 import pysftp
 from PIL import Image
 
-'''
- TODO: Move folders from 002-ingest to 003-ingested 
- example:
- sudo cp -R . /library/lib-sftp/003-ingested/P005_University_of_Denver_Clarion-resources_1194/
- sudo cp -R . /library/lib-sftp/001-ready/new_000_qa_test-resources_496/
-'''
-
-'''
-Checks if folder name conforms to naming standard
-@param: folder
-@returns: Array
-'''
+ready_path = os.getenv('READY_PATH')
+ingest_path = os.getenv('INGEST_PATH')
+ingested_path = os.getenv('INGESTED_PATH')
+sftp_host = os.getenv('SFTP_HOST')
+sftp_username = os.getenv('SFTP_ID')
+sftp_password = os.getenv('SFTP_PWD')
+sftp_path = os.getenv('SFTP_REMOTE_PATH')
+wasabi_endpoint = os.getenv('WASABI_ENDPOINT')
+wasabi_bucket = os.getenv('WASABI_BUCKET')
+wasabi_profile = os.getenv('WASABI_PROFILE')
 
 
 def check_folder_name(folder):
+    """
+    Checks if folder name conforms to naming standard
+    @param: folder
+    @returns: Array
+    """
+
     errors = []
 
     if folder.find('new_') == -1:
@@ -43,15 +47,14 @@ def check_folder_name(folder):
         return []
 
 
-'''
-Checks package names and fixes case issues and removes spaces
-@param: ready_path
-@param: folder
-@returns: void
-'''
+def check_package_names(folder):
+    """
+    Checks package names and fixes case issues and removes spaces
+    @param: ready_path
+    @param: folder
+    @returns: void
+    """
 
-
-def check_package_names(ready_path, folder):
     packages = [f for f in os.listdir(ready_path + folder) if not f.startswith('.')]
     [os.remove(ready_path + folder + '/' + f) for f in os.listdir(ready_path + folder) if f.startswith('.')]
 
@@ -68,15 +71,14 @@ def check_package_names(ready_path, folder):
                 os.rename(package + i, package + i.lower().replace(' ', ''))
 
 
-'''
-Checks file names and fixes case issues and removes spaces
-@param: ready_path
-@param: folder
-@returns: Array
-'''
+def check_file_names(folder):
+    """
+    Checks file names and fixes case issues and removes spaces
+    @param: ready_path
+    @param: folder
+    @returns: Array
+    """
 
-
-def check_file_names(ready_path, folder):
     errors = []
     files_arr = []
     packages = [f for f in os.listdir(ready_path + folder) if not f.startswith('.')]
@@ -105,6 +107,7 @@ def check_file_names(ready_path, folder):
                 # check images here
                 file = package + j
                 if file.endswith('.tiff') or file.endswith('.tif') or file.endswith('.jpg') or file.endswith('.png'):
+                    # validates image
                     result = check_image_file(file, j)
 
                     if result.get('error') != False:
@@ -118,19 +121,20 @@ def check_file_names(ready_path, folder):
                     if result.get('error') != False:
                         errors.append(result)
 
+        time.sleep(20)
+
     local_file_count = len(files_arr)
     return dict(local_file_count=local_file_count, errors=errors)
 
 
-'''
-Checks image files to determine if they are broken/corrupt
-@param: full_path
-@param: file_name
-@returns: Object
-'''
-
-
 def check_image_file(full_path, file_name):
+    """
+    Checks image files to determine if they are broken/corrupt
+    @param: full_path
+    @param: file_name
+    @returns: Object
+    """
+
     try:
         img = Image.open(full_path)
         img.verify()  # confirm that file is an image
@@ -144,6 +148,12 @@ def check_image_file(full_path, file_name):
 
 
 def check_pdf_file(full_path, file_name):
+    """
+    Checks pdf files to determine file size. Rejects files larger than 900mb
+    @param: full_path
+    @param: file_name
+    @returns: Object
+    """
     try:
         # print(full_path)
         # print(file_name)
@@ -157,17 +167,14 @@ def check_pdf_file(full_path, file_name):
         return dict(error=str(error), file=file_name)
 
 
-# TODO: check dates (start/end) in archivesspace record // check on client side?
+def check_uri_txt(folder):
+    """
+    Checks for missing uri.txt files
+    @param: ready_path
+    @param: folder
+    @returns: Array
+    """
 
-'''
-Checks for missing uri.txt files
-@param: ready_path
-@param: folder
-@returns: Array
-'''
-
-
-def check_uri_txt(ready_path, folder):
     errors = []
     packages = [f for f in os.listdir(ready_path + folder) if not f.startswith('.')]
 
@@ -184,16 +191,15 @@ def check_uri_txt(ready_path, folder):
     return errors
 
 
-'''
-Checks package file size (bytes)
-@param: ready_path
-@param: folder
-@returns: Integer
-https://stackoverflow.com/questions/1392413/calculating-a-directorys-size-using-python
-'''
+def get_package_size(folder):
+    """
+    Checks package file size (bytes)
+    @param: ready_path
+    @param: folder
+    @returns: Integer
+    https://stackoverflow.com/questions/1392413/calculating-a-directorys-size-using-python
+    """
 
-
-def get_package_size(ready_path, folder):
     package = ready_path + folder
     total_size = 0
     for dirpath, dirnames, filenames in os.walk(package):
@@ -206,16 +212,15 @@ def get_package_size(ready_path, folder):
     return total_size
 
 
-'''
-Moves folder from ready to ingest folder and renames it using pid
-@param: ready_path
-@param: ingest_path
-@param: folder
-@returns: String (if there is an error)
-'''
+def move_to_ingest(pid, folder):
+    '''
+    Moves folder from ready to ingest folder and renames it using pid
+    @param: ready_path
+    @param: ingest_path
+    @param: folder
+    @returns: String (if there is an error)
+    '''
 
-
-def move_to_ingest(ready_path, ingest_path, pid, folder):
     errors = []
     mode = 0o777
 
@@ -242,26 +247,18 @@ def move_to_ingest(ready_path, ingest_path, pid, folder):
     return errors
 
 
-'''
-Moves folder to archivematica sftp
-@param: host
-@param: username
-@param: password
-@param: sftp_path
-@returns: void
-'''
+def move_to_sftp(pid):
+    """"
+    Moves folder to archivematica sftp via ssh
+    @param: pid
+    @returns: void
+    """
 
-
-def move_to_sftp(ingest_path, pid):
-    host = os.getenv('SFTP_HOST')
-    username = os.getenv('SFTP_ID')
-    password = os.getenv('SFTP_PWD')
-    sftp_path = os.getenv('SFTP_REMOTE_PATH')
     cnopts = pysftp.CnOpts()
     cnopts.hostkeys = None
     errors = []
 
-    with pysftp.Connection(host=host, username=username, password=password, cnopts=cnopts) as sftp:
+    with pysftp.Connection(host=sftp_host, username=sftp_username, password=sftp_password, cnopts=cnopts) as sftp:
         sftp.put_r(ingest_path, sftp_path, preserve_mtime=True)
         packages = sftp.listdir()
 
@@ -269,23 +266,16 @@ def move_to_sftp(ingest_path, pid):
             errors.append(-1)
 
 
-'''
-checks upload on archivematica sftp
-@param: host
-@param: username
-@param: password
-@param: sftp_path
-@returns: Array
-'''
-
-
 def check_sftp(pid, local_file_count):
-    host = os.getenv('SFTP_HOST')
-    username = os.getenv('SFTP_ID')
-    password = os.getenv('SFTP_PWD')
+    """
+    checks upload status on archivematica sftp
+    @param: pid
+    @param: local_file_count
+    @returns: Object
+    """
+
     cnopts = pysftp.CnOpts()
     cnopts.hostkeys = None
-    sftp_path = os.getenv('SFTP_REMOTE_PATH')
     file_names = []
     dir_names = []
     un_name = []
@@ -299,7 +289,7 @@ def check_sftp(pid, local_file_count):
     def store_other_file_types(name):
         un_name.append(name)
 
-    with pysftp.Connection(host=host, username=username, password=password, cnopts=cnopts) as sftp:
+    with pysftp.Connection(host=sftp_host, username=sftp_username, password=sftp_password, cnopts=cnopts) as sftp:
         remote_package = sftp_path + '/' + pid + '/'
         sftp.cwd(remote_package)
         sftp.walktree(remote_package, store_files_name, store_dir_name, store_other_file_types, recurse=True)
@@ -316,7 +306,13 @@ def check_sftp(pid, local_file_count):
                     remote_package_size=remote_package_size[0].decode().strip().replace('\t', ''))
 
 
-def move_to_ingested(ingest_path, ingested_path, pid, folder):
+def move_to_ingested(pid, folder):
+    """
+    Moves packages to ingested folder and Wasabi S3 bucket
+    @param: pid
+    @param: folder
+    @returns: void
+    """
 
     errors = []
     ingested = ingested_path + folder.replace('new_', '')
@@ -325,7 +321,7 @@ def move_to_ingested(ingest_path, ingested_path, pid, folder):
 
     if exists:
 
-        try: # move only files because collection folder already exists
+        try:  # move only files because collection folder already exists
             file_names = [f for f in os.listdir(ingest_path + pid) if not f.startswith('.')]
 
             for file_name in file_names:
@@ -336,7 +332,7 @@ def move_to_ingested(ingest_path, ingested_path, pid, folder):
         except:
             return errors.append('ERROR: Unable to move files to ingested folder (move_to_ingested)')
 
-    else: # move entire folder
+    else:  # move entire folder
 
         try:
             shutil.move(ingest_path + pid, ingest_path + folder.replace('new_', ''))
@@ -353,10 +349,12 @@ def move_to_ingested(ingest_path, ingested_path, pid, folder):
 
 
 def move_to_s3(source, folder):
-
-    wasabi_endpoint = os.getenv('WASABI_ENDPOINT')
-    wasabi_bucket = os.getenv('WASABI_BUCKET')
-    wasabi_profile = os.getenv('WASABI_PROFILE')
+    """
+    Moves packages to Wasabi S3 bucket
+    @param: source
+    @param: folder
+    @returns: void
+    """
 
     aws_exec = '/usr/local/bin/aws s3 cp'
     aws_endpoint = '--endpoint-url=' + wasabi_endpoint

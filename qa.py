@@ -13,32 +13,31 @@ dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path)
 
 ready_path = os.getenv('READY_PATH')
-ingest_path = os.getenv('INGEST_PATH')
-ingested_path = os.getenv('INGESTED_PATH')
+batch_size_limit = os.getenv('BATCH_SIZE_LIMIT')
+app_version = os.getenv('APP_VERSION')
 
 app = Flask(__name__)
 cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
 
-'''
-Renders QA API Information
-@returns: String
-'''
-
 
 @app.route('/', methods=['GET'])
 def index():
-    return 'DigitalDU-QA v0.7.0'
+    """
+    Renders QA API Information
+    @returns: String
+    """
 
-
-'''
-Gets a list of ready folders
-@param: api_key
-@returns: Json
-'''
+    return 'DigitalDU-QA ' + app_version
 
 
 @app.route('/api/v1/qa/list-ready', methods=['GET'])
 def list_ready_folders():
+    """"
+    Gets a list of ready folders
+    @param: api_key
+    @returns: Json
+    """
+
     api_key = request.args.get('api_key')
 
     if api_key is None:
@@ -60,24 +59,26 @@ def list_ready_folders():
     return json.dumps(ready_list), 200
 
 
-'''
-Runs QA on ready folder
-@param: api_key
-@param: folder
-@returns: Json
-'''
-
-
 @app.route('/api/v1/qa/run-qa', methods=['GET'])
 def run_qa_on_ready():
+    """
+    Runs QA on ready folder
+    @param: api_key
+    @param: folder
+    @returns: Json
+    """
+
     api_key = request.args.get('api_key')
+    folder = request.args.get('folder')
 
     if api_key is None:
         return json.dumps(['Access denied.']), 403
     elif api_key != os.getenv('API_KEY'):
         return json.dumps(['Access denied.']), 403
 
-    folder = request.args.get('folder')
+    if folder is None:
+        return json.dumps(['Bad Request: Missing folder param']), 400
+
     errors = qa_lib.check_folder_name(folder)
 
     if len(errors) > 0:
@@ -86,20 +87,19 @@ def run_qa_on_ready():
                       errors=errors)
         return json.dumps(result), 200
 
-    errors = qa_lib.check_package_names(ready_path, folder)
+    errors = qa_lib.check_package_names(folder)
 
     if errors == -1:
         response = dict(file_results=[], message='There are no packages in the current folder.',
                         errors=['Folder is empty'])
         return json.dumps(response), 200
 
-    file_results = qa_lib.check_file_names(ready_path, folder)
+    file_results = qa_lib.check_file_names(folder)
+    uri_errors = qa_lib.check_uri_txt(folder)
+    total_size = qa_lib.get_package_size(folder)
 
-    uri_errors = qa_lib.check_uri_txt(ready_path, folder)
-    total_size = qa_lib.get_package_size(ready_path, folder)
-
-    if total_size > 225000000000:
-        # TODO: figure out how to split up LARGE (over 225GB) collections
+    if total_size > batch_size_limit:
+        # TODO: inform user to use smaller batch loads
         print('Split up packages')
 
     results = dict(file_results=file_results, uri_errors=uri_errors, total_size=total_size, message='Package results')
@@ -107,27 +107,31 @@ def run_qa_on_ready():
     return json.dumps(results), 200
 
 
-'''
-Moves packages to ingest folder
-@param: api_key
-@param: folder
-@returns: Json
-'''
-
-
 @app.route('/api/v1/qa/move-to-ingest', methods=['GET'])
 def move_to_ingest():
+    """
+    Moves packages to ingest folder
+    @param: api_key
+    @param: folder
+    @returns: Json
+    """
+
     api_key = request.args.get('api_key')
+    pid = request.args.get('pid')
+    folder = request.args.get('folder')
 
     if api_key is None:
         return json.dumps(['Access denied.']), 403
     elif api_key != os.getenv('API_KEY'):
         return json.dumps(['Access denied.']), 403
 
-    pid = request.args.get('pid')
-    folder = request.args.get('folder')
+    if pid is None:
+        return json.dumps(['Bad Request: Missing pid param.']), 400
 
-    errors = qa_lib.move_to_ingest(ready_path, ingest_path, pid, folder)
+    if folder is None:
+        return json.dumps(['Bad Request: Missing folder param.']), 400
+
+    errors = qa_lib.move_to_ingest(pid, folder)
 
     if len(errors) > 0:
         return json.dumps(dict(message='QA process failed.', errors=errors)), 200
@@ -135,17 +139,16 @@ def move_to_ingest():
     return json.dumps(dict(message='Packages moved to ingest folder', errors=errors)), 200
 
 
-'''
-Uploads packges to Archivematica server
-@param: api_key
-@param: pid
-@param: folder
-@returns: Json
-'''
-
-
 @app.route('/api/v1/qa/move-to-sftp', methods=['GET'])
 def move_to_sftp():
+    """
+    Uploads packges to Archivematica server
+    @param: api_key
+    @param: pid
+    @param: folder
+    @returns: Json
+    """
+
     api_key = request.args.get('api_key')
 
     if api_key is None:
@@ -154,21 +157,20 @@ def move_to_sftp():
         return json.dumps(['Access denied.']), 403
 
     pid = request.args.get('pid')
-    qa_lib.move_to_sftp(ingest_path, pid)
+    qa_lib.move_to_sftp(pid)
 
     return json.dumps(dict(message='Uploading packages to Archivematica sftp')), 200
 
 
-'''
-Checks upload status of packages on Archivematica sftp
-@param: api_key
-@param: pid
-@returns: Json
-'''
-
-
 @app.route('/api/v1/qa/upload-status', methods=['GET'])
 def check_sftp():
+    """
+    Checks upload status of packages on Archivematica sftp
+    @param: api_key
+    @param: pid
+    @returns: Json
+    """
+
     api_key = request.args.get('api_key')
 
     if api_key is None:
@@ -189,6 +191,13 @@ def check_sftp():
 
 @app.route('/api/v1/qa/move-to-ingested', methods=['GET'])
 def move_to_ingested():
+    """
+    Move packages to ingested folder
+    @param: api_key
+    @param: folder
+    @param: pid
+    @returns: Json
+    """
 
     api_key = request.args.get('api_key')
     folder = request.args.get('folder')
@@ -199,7 +208,7 @@ def move_to_ingested():
     elif api_key != os.getenv('API_KEY'):
         return json.dumps(['Access denied.']), 403
 
-    results = qa_lib.move_to_ingested(ingest_path, ingested_path, pid, folder)
+    results = qa_lib.move_to_ingested(pid, folder)
     # TODO: remove collection folder name text file
     return json.dumps(results), 200
 
