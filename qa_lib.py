@@ -219,13 +219,15 @@ def move_to_ingest(ready_path, ingest_path, pid, folder):
     errors = []
     mode = 0o777
 
+    os.mkdir(folder, mode)
+
+    with open(folder + '/' + folder + '.txt', 'w') as file:
+        file.write(folder)
+
     try:
         shutil.move(ready_path + folder, ingest_path + folder)
     except:
         return errors.append('ERROR: Unable to move folder (move_to_ingest)')
-
-    # TODO: calculate time based on size of collection
-    # time.sleep(15.0)
 
     try:
         os.rename(ingest_path + folder, ingest_path + pid)
@@ -338,7 +340,6 @@ def move_to_ingested(ingest_path, ingested_path, pid, folder):
 
         try:
             shutil.move(ingest_path + pid, ingest_path + folder.replace('new_', ''))
-            print('cp -R ' + ingest_path + folder.replace('new_', '') + ' ' + ingested)
             os.system('cp -R ' + ingest_path + folder.replace('new_', '') + ' ' + ingested)
             source = ingest_path
             move_to_s3(source, '')

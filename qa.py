@@ -126,6 +126,7 @@ def move_to_ingest():
 
     pid = request.args.get('pid')
     folder = request.args.get('folder')
+
     errors = qa_lib.move_to_ingest(ready_path, ingest_path, pid, folder)
 
     if len(errors) > 0:
@@ -199,6 +200,7 @@ def move_to_ingested():
         return json.dumps(['Access denied.']), 403
 
     results = qa_lib.move_to_ingested(ingest_path, ingested_path, pid, folder)
+    # TODO: remove collection folder name text file
     return json.dumps(results), 200
 
 
