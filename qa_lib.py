@@ -93,17 +93,6 @@ def check_package_names(folder):
         for thread in threads:
             thread.join()
 
-
-        """
-        package = ready_path + folder + '/'
-
-        if i.upper():
-            call_number = i.find('.')
-
-            if call_number == -1:
-                os.rename(package + i, package + i.lower().replace(' ', ''))
-        """
-
     return dict(result=['Package names checked.'], errors=errors)
 
 
