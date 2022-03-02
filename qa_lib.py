@@ -1,8 +1,14 @@
 import os
+from os.path import join, dirname
+import threading
 import shutil
 import time
 import pysftp
 from PIL import Image
+from dotenv import load_dotenv
+
+dotenv_path = join(dirname(__file__), '.env')
+load_dotenv(dotenv_path)
 
 ready_path = os.getenv('READY_PATH')
 ingest_path = os.getenv('INGEST_PATH')
@@ -19,7 +25,7 @@ wasabi_profile = os.getenv('WASABI_PROFILE')
 def get_ready_folders():
     """
     Gets ready folders
-    @param: folder
+    @returns Dictionary
     """
 
     ready_list = {}
@@ -33,14 +39,14 @@ def get_ready_folders():
         if package_count > 0:
             ready_list[folder] = package_count
 
-    return ready_list
+    return dict(result=ready_list, errors=[])
 
 
 def check_folder_name(folder):
     """
     Checks if folder name conforms to naming standard
     @param: folder
-    @returns: Array
+    @returns: Dictionary
     """
 
     errors = []
@@ -60,24 +66,35 @@ def check_folder_name(folder):
     if is_id == False:
         errors.append('Folder is missing "URI" part')
 
-    return errors
+    return dict(result=['Folder name checked'], errors=errors)
 
 
 def check_package_names(folder):
     """
     Checks package names and fixes case issues and removes spaces
-    @param: ready_path
     @param: folder
-    @returns: void
+    @returns: Dictionary
     """
 
+    threads = []
     packages = [f for f in os.listdir(ready_path + folder) if not f.startswith('.')]
     [os.remove(ready_path + folder + '/' + f) for f in os.listdir(ready_path + folder) if f.startswith('.')]
+    errors = []
 
     if len(packages) == 0:
-        return -1
+        errors.append(['No packages found'])
 
     for i in packages:
+
+        thread = threading.Thread(target=check_package_names_threads, args=(folder, i))
+        threads.append(thread)
+        thread.start()
+
+        for thread in threads:
+            thread.join()
+
+
+        """
         package = ready_path + folder + '/'
 
         if i.upper():
@@ -85,21 +102,47 @@ def check_package_names(folder):
 
             if call_number == -1:
                 os.rename(package + i, package + i.lower().replace(' ', ''))
+        """
+
+    return dict(result=['Package names checked.'], errors=errors)
+
+
+def check_package_names_threads(folder, i):
+    """
+    Processes packages (thread function for check_package_names)
+    @param: folder
+    @param: i
+    @returns: Dictionary
+    """
+
+    package = ready_path + folder + '/'
+
+    if i.upper():
+        call_number = i.find('.')
+
+        if call_number == -1:
+            os.rename(package + i, package + i.lower().replace(' ', ''))
 
 
 def check_file_names(folder):
     """
     Checks file names and fixes case issues and removes spaces
-    @param: ready_path
     @param: folder
-    @returns: Array
+    @returns: Dictionary
     """
 
-    errors = []
-    files_arr = []
     packages = [f for f in os.listdir(ready_path + folder) if not f.startswith('.')]
+    threads = []
+    files_arr = []
+    errors = []
 
     for i in packages:
+
+        thread = threading.Thread(target=check_file_names_threads, args=(folder, i))
+        threads.append(thread)
+        thread.start()
+
+        # Get total file count from packages
         package = ready_path + folder + '/' + i + '/'
         files = [f for f in os.listdir(package) if not f.startswith('.')]
         [os.remove(package + f) for f in os.listdir(package) if f.startswith('.')]
@@ -108,39 +151,48 @@ def check_file_names(folder):
             errors.append(i)
 
         for j in files:
-
             files_arr.append(j)
 
-            if j.upper():
+        local_file_count = len(files_arr)
 
-                call_number = j.find('.')
+    for thread in threads:
+        thread.join()
 
-                if call_number == -1:
-                    os.rename(package + j, package + j.lower().replace(' ', ''))
-                elif call_number != -1:
-                    os.rename(package + j, package + j.replace(' ', ''))
+    return dict(result=local_file_count, errors=errors)
 
-                # check images here
-                file = package + j
-                if file.endswith('.tiff') or file.endswith('.tif') or file.endswith('.jpg') or file.endswith('.png'):
-                    # validates image
-                    result = check_image_file(file, j)
 
-                    if result.get('error') != False:
-                        errors.append(result)
+def check_file_names_threads(folder, i):
+    """
+    Processes packages (thread function for check_file_names)
+    @param: folder
+    @param: i
+    @returns: void
+    """
 
-                # check pdfs here
-                file = package + j
-                if file.endswith('.pdf'):
-                    result = check_pdf_file(file, j)
+    package = ready_path + folder + '/' + i + '/'
+    files = [f for f in os.listdir(package) if not f.startswith('.')]
+    [os.remove(package + f) for f in os.listdir(package) if f.startswith('.')]
 
-                    if result.get('error') != False:
-                        errors.append(result)
+    for j in files:
 
-        time.sleep(20)
+        if j.upper():
 
-    local_file_count = len(files_arr)
-    return dict(local_file_count=local_file_count, errors=errors)
+            call_number = j.find('.')
+
+            if call_number == -1:
+                os.rename(package + j, package + j.lower().replace(' ', ''))
+            elif call_number != -1:
+                os.rename(package + j, package + j.replace(' ', ''))
+
+            # check images here
+            file = package + j
+            if file.endswith('.tiff') or file.endswith('.tif') or file.endswith('.jpg') or file.endswith('.png'):
+                # validates image
+                check_image_file(file, j)
+
+            # check pdfs here
+            if file.endswith('.pdf'):
+                check_pdf_file(file, j)
 
 
 def check_image_file(full_path, file_name):
@@ -148,7 +200,7 @@ def check_image_file(full_path, file_name):
     Checks image files to determine if they are broken/corrupt
     @param: full_path
     @param: file_name
-    @returns: Object
+    @returns: Dictionary
     """
 
     try:
@@ -158,9 +210,8 @@ def check_image_file(full_path, file_name):
         img = Image.open(full_path)
         img.transpose(Image.FLIP_LEFT_RIGHT)  # attempt to manipulate file to determine if it's broken
         img.close()
-        return dict(error=False, file='')
     except OSError as error:
-        return dict(error=str(error), file=file_name)
+        print(error)
 
 
 def check_pdf_file(full_path, file_name):
@@ -168,19 +219,20 @@ def check_pdf_file(full_path, file_name):
     Checks pdf files to determine file size. Rejects files larger than 900mb
     @param: full_path
     @param: file_name
-    @returns: Object
+    @returns: Dictionary
     """
-    try:
+    # TODO:...
+    # try:
         # print(full_path)
         # print(file_name)
         # TODO: reject anything over 900mb
         # https://stackoverflow.com/questions/2104080/how-can-i-check-file-size-in-python
         # i.e. Path('somefile.txt').stat().st_size
 
-        return dict(error=False, file='')
+        # return dict(error=False, file='')
 
-    except OSError as error:
-        return dict(error=str(error), file=file_name)
+    # except OSError as error:
+        # return dict(error=str(error), file=file_name)
 
 
 def check_uri_txt(folder):
@@ -188,7 +240,7 @@ def check_uri_txt(folder):
     Checks for missing uri.txt files
     @param: ready_path
     @param: folder
-    @returns: Array
+    @returns: Dictionary
     """
 
     errors = []
@@ -198,26 +250,28 @@ def check_uri_txt(folder):
         return errors.append(-1)
 
     for i in packages:
+
         package = ready_path + folder + '/' + i + '/'
         files = [f for f in os.listdir(package) if not f.startswith('.')]
 
         if 'uri.txt' not in files:
             errors.append(i)
 
-    return errors
+    return dict(result=['URI txt files checked'], errors=errors)
 
 
 def get_package_size(folder):
     """
     Checks package file size (bytes)
-    @param: ready_path
     @param: folder
-    @returns: Integer
+    @returns: Dictionary
     https://stackoverflow.com/questions/1392413/calculating-a-directorys-size-using-python
     """
 
     package = ready_path + folder
     total_size = 0
+    errors = []
+
     for dirpath, dirnames, filenames in os.walk(package):
         for f in filenames:
             fp = os.path.join(dirpath, f)
@@ -225,16 +279,15 @@ def get_package_size(folder):
             if not os.path.islink(fp):
                 total_size += os.path.getsize(fp)
 
-    return total_size
+    return dict(result=total_size, errors=errors)
 
 
 def move_to_ingest(pid, folder):
     '''
     Moves folder from ready to ingest folder and renames it using pid
-    @param: ready_path
-    @param: ingest_path
+    @param: pid
     @param: folder
-    @returns: String (if there is an error)
+    @returns: Dictionary
     '''
 
     errors = []
@@ -242,30 +295,35 @@ def move_to_ingest(pid, folder):
 
     os.mkdir(folder, mode)
 
-    with open(folder + '/' + folder + '.txt', 'w') as file:
-        file.write(folder)
+    # with open(folder + '/' + folder + '.txt', 'w') as file:
+    #    file.write(folder)
 
     try:
         shutil.move(ready_path + folder, ingest_path + folder)
     except:
-        return errors.append('ERROR: Unable to move folder (move_to_ingest)')
+        errors.append('ERROR: Unable to move folder (move_to_ingest)')
 
     try:
         os.rename(ingest_path + folder, ingest_path + pid)
     except:
-        return errors.append('ERROR: Unable to rename folder (move_to_ingest)')
+        errors.append('ERROR: Unable to rename folder (move_to_ingest)')
 
     try:
         os.mkdir(ready_path + folder, mode)
     except:
-        return errors.append('ERROR: Unable to create folder (move_to_ingest)')
+        errors.append('ERROR: Unable to create folder (move_to_ingest)')
 
-    return errors
+    if len(errors) == 0:
+        result = ['Packages moved to ingested folder.']
+    else:
+        result = ['Packages not moved to ingested folder.']
+
+    return dict(result=result, errors=errors)
 
 
 def move_to_sftp(pid):
     """"
-    Moves folder to archivematica sftp via ssh
+    Moves folder to Archivematica sftp via ssh
     @param: pid
     @returns: void
     """
@@ -287,7 +345,7 @@ def check_sftp(pid, local_file_count):
     checks upload status on archivematica sftp
     @param: pid
     @param: local_file_count
-    @returns: Object
+    @returns: Dictionary
     """
 
     cnopts = pysftp.CnOpts()
@@ -327,13 +385,12 @@ def move_to_ingested(pid, folder):
     Moves packages to ingested folder and Wasabi S3 bucket
     @param: pid
     @param: folder
-    @returns: void
+    @returns: Dictionary
     """
 
     errors = []
     ingested = ingested_path + folder.replace('new_', '')
     exists = os.path.isdir(ingested)
-    # TODO: move to a "cleanup" function shutil.rmtree(ingest_path + folder.replace('new_', ''))
 
     if exists:
 
@@ -359,9 +416,11 @@ def move_to_ingested(pid, folder):
             return errors.append('ERROR: Unable to move folder (move_to_ingested)')
 
     if len(errors) == 0:
-        return ['Packages moved to ingested folder']
+        result = ['Packages moved to ingested folder']
     else:
-        return errors
+        result = ['Packages not moved to ingested folder']
+
+    return dict(result=result, errors=errors)
 
 
 def move_to_s3(source, folder):
@@ -372,21 +431,38 @@ def move_to_s3(source, folder):
     @returns: void
     """
 
+    errors = []
     aws_exec = '/usr/local/bin/aws s3 cp'
     aws_endpoint = '--endpoint-url=' + wasabi_endpoint
     aws_bucket = wasabi_bucket
     aws_args = '--recursive --profile ' + wasabi_profile
 
     if folder != '':
-        aws_cmd = aws_exec + ' ' + source + ' ' + aws_endpoint + ' ' + aws_bucket + folder + ' ' + aws_args
-        os.system(aws_cmd)
+        try:
+            aws_cmd = aws_exec + ' ' + source + ' ' + aws_endpoint + ' ' + aws_bucket + folder + ' ' + aws_args
+            os.system(aws_cmd)
+        except:
+            errors.append('error')
     else:
-        aws_cmd = aws_exec + ' ' + source + ' ' + aws_endpoint + ' ' + aws_bucket + ' ' + aws_args
-        os.system(aws_cmd)
+        try:
+            aws_cmd = aws_exec + ' ' + source + ' ' + aws_endpoint + ' ' + aws_bucket + ' ' + aws_args
+            os.system(aws_cmd)
+        except:
+            errors.append('error')
 
-    # TODO: call cleanup function here
+    # TODO: log instead
+    """
+    if len(errors) == 0:
+        result = ['Packages moved to Wasabi S3 bucket']
+    else:
+        result = ['Packages not moved to Wasabi S3 bucket']
+
+    return dict(result=result, errors=errors)
+    """
+
 
 # TODO
+# TODO: move to a "cleanup" function shutil.rmtree(ingest_path + folder.replace('new_', ''))
 def clean_up_sftp(pid):
     host = os.getenv('SFTP_HOST')
     username = os.getenv('SFTP_ID')

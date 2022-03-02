@@ -1,7 +1,6 @@
 import json
 import os
 from os.path import join, dirname
-
 from dotenv import load_dotenv
 from flask import Flask, request
 from flask_cors import CORS
@@ -39,13 +38,18 @@ def list_ready_folders():
     """
 
     api_key = request.args.get('api_key')
+    errors = []
 
     if api_key is None:
-        return json.dumps(['Access denied.']), 403
+        errors.append('Access denied.')
     elif api_key != os.getenv('API_KEY'):
-        return json.dumps(['Access denied.']), 403
+        errors.append('Access denied.')
+
+    if len(errors) > 0:
+        return json.dumps(errors), 403
 
     ready_list = qa_lib.get_ready_folders()
+
     return json.dumps(ready_list), 200
 
 
@@ -60,26 +64,30 @@ def run_qa_on_ready():
 
     api_key = request.args.get('api_key')
     folder = request.args.get('folder')
+    errors = []
 
     if api_key is None:
-        return json.dumps(['Access denied.']), 403
+        errors.append('Access denied.')
     elif api_key != os.getenv('API_KEY'):
-        return json.dumps(['Access denied.']), 403
+        errors.append('Access denied.')
+
+    if len(errors) > 0:
+        return json.dumps(errors), 403
 
     if folder is None:
         return json.dumps(['Bad Request: Missing folder param']), 400
 
-    package_name_errors = qa_lib.check_package_names(folder)
-    folder_name_errors = qa_lib.check_folder_name(folder)
-    file_results = qa_lib.check_file_names(folder)
-    uri_errors = qa_lib.check_uri_txt(folder)
+    folder_name_results = qa_lib.check_folder_name(folder)
+    package_name_results = qa_lib.check_package_names(folder) # uses threads
+    file_results = qa_lib.check_file_names(folder) # uses threads
+    uri_results = qa_lib.check_uri_txt(folder)
     total_size = qa_lib.get_package_size(folder)
 
     results = dict(
-        package_name_errors=package_name_errors,
-        folder_name_errors=folder_name_errors,
+        package_name_results=package_name_results,
+        folder_name_results=folder_name_results,
         file_results=file_results,
-        uri_errors=uri_errors,
+        uri_results=uri_results,
         total_size=total_size
     )
 
@@ -98,11 +106,15 @@ def move_to_ingest():
     api_key = request.args.get('api_key')
     pid = request.args.get('pid')
     folder = request.args.get('folder')
+    errors = []
 
     if api_key is None:
-        return json.dumps(['Access denied.']), 403
+        errors.append('Access denied.')
     elif api_key != os.getenv('API_KEY'):
-        return json.dumps(['Access denied.']), 403
+        errors.append('Access denied.')
+
+    if len(errors) > 0:
+        return json.dumps(errors), 403
 
     if pid is None:
         return json.dumps(['Bad Request: Missing pid param.']), 400
@@ -110,12 +122,9 @@ def move_to_ingest():
     if folder is None:
         return json.dumps(['Bad Request: Missing folder param.']), 400
 
-    errors = qa_lib.move_to_ingest(pid, folder)
+    results = qa_lib.move_to_ingest(pid, folder)
 
-    if len(errors) > 0:
-        return json.dumps(dict(message='QA process failed.', errors=errors)), 200
-
-    return json.dumps(dict(message='Packages moved to ingest folder', errors=errors)), 200
+    return json.dumps(results), 200
 
 
 @app.route('/api/v1/qa/move-to-sftp', methods=['GET'])
@@ -129,13 +138,20 @@ def move_to_sftp():
     """
 
     api_key = request.args.get('api_key')
+    pid = request.args.get('pid')
+    errors = []
 
     if api_key is None:
-        return json.dumps(['Access denied.']), 403
+        errors.append('Access denied.')
     elif api_key != os.getenv('API_KEY'):
-        return json.dumps(['Access denied.']), 403
+        errors.append('Access denied.')
 
-    pid = request.args.get('pid')
+    if len(errors) > 0:
+        return json.dumps(errors), 403
+
+    if pid is None:
+        return json.dumps(['Bad Request: Missing pid param.']), 400
+
     qa_lib.move_to_sftp(pid)
 
     return json.dumps(dict(message='Uploading packages to Archivematica sftp')), 200
@@ -151,17 +167,23 @@ def check_sftp():
     """
 
     api_key = request.args.get('api_key')
+    pid = request.args.get('pid')
+    errors = []
 
     if api_key is None:
-        return json.dumps(['Access denied.']), 403
+        errors.append('Access denied.')
     elif api_key != os.getenv('API_KEY'):
-        return json.dumps(['Access denied.']), 403
+        errors.append('Access denied.')
 
-    pid = request.args.get('pid')
+    if len(errors) > 0:
+        return json.dumps(errors), 403
+
+    if pid is None:
+        return json.dumps(['Bad Request: Missing pid param.']), 400
+
     local_file_count = request.args.get('local_file_count')
 
     if local_file_count == None:
-        print('file count response none')
         return json.dumps(dict(message='File count not found.', data=[])), 200
 
     results = qa_lib.check_sftp(pid, local_file_count)
@@ -188,7 +210,7 @@ def move_to_ingested():
         return json.dumps(['Access denied.']), 403
 
     results = qa_lib.move_to_ingested(pid, folder)
-    # TODO: remove collection folder name text file
+
     return json.dumps(results), 200
 
 
