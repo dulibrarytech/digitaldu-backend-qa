@@ -2,7 +2,6 @@ import os
 from os.path import join, dirname
 import threading
 import shutil
-import time
 import pysftp
 from PIL import Image
 from dotenv import load_dotenv
@@ -66,7 +65,7 @@ def check_folder_name(folder):
     if is_id == False:
         errors.append('Folder is missing "URI" part')
 
-    return dict(result=['Folder name checked'], errors=errors)
+    return dict(result='folder_name_checked', errors=errors)
 
 
 def check_package_names(folder):
@@ -93,7 +92,7 @@ def check_package_names(folder):
         for thread in threads:
             thread.join()
 
-    return dict(result=['Package names checked.'], errors=errors)
+    return dict(result='package_names_checked.', errors=errors)
 
 
 def check_package_names_threads(folder, i):
@@ -246,7 +245,7 @@ def check_uri_txt(folder):
         if 'uri.txt' not in files:
             errors.append(i)
 
-    return dict(result=['URI txt files checked'], errors=errors)
+    return dict(result='URI txt files checked', errors=errors)
 
 
 def get_package_size(folder):
@@ -284,9 +283,6 @@ def move_to_ingest(pid, folder):
 
     os.mkdir(folder, mode)
 
-    # with open(folder + '/' + folder + '.txt', 'w') as file:
-    #    file.write(folder)
-
     try:
         shutil.move(ready_path + folder, ingest_path + folder)
     except:
@@ -303,9 +299,9 @@ def move_to_ingest(pid, folder):
         errors.append('ERROR: Unable to create folder (move_to_ingest)')
 
     if len(errors) == 0:
-        result = ['Packages moved to ingested folder.']
+        result = 'packages_moved_to_ingested_folder.'
     else:
-        result = ['Packages not moved to ingested folder.']
+        result = 'packages_not_moved_to_ingested_folder.'
 
     return dict(result=result, errors=errors)
 
@@ -405,9 +401,9 @@ def move_to_ingested(pid, folder):
             return errors.append('ERROR: Unable to move folder (move_to_ingested)')
 
     if len(errors) == 0:
-        result = ['Packages moved to ingested folder']
+        result = 'packages_moved_to_ingested_folder'
     else:
-        result = ['Packages not moved to ingested folder']
+        result = 'packages_not_moved_to_ingested_folder'
 
     return dict(result=result, errors=errors)
 
@@ -450,7 +446,6 @@ def move_to_s3(source, folder):
     """
 
 
-# TODO
 # TODO: move to a "cleanup" function shutil.rmtree(ingest_path + folder.replace('new_', ''))
 def clean_up_sftp(pid):
     host = os.getenv('SFTP_HOST')

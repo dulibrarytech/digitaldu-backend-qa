@@ -78,8 +78,8 @@ def run_qa_on_ready():
         return json.dumps(['Bad Request: Missing folder param']), 400
 
     folder_name_results = qa_lib.check_folder_name(folder)
-    package_name_results = qa_lib.check_package_names(folder) # uses threads
-    file_results = qa_lib.check_file_names(folder) # uses threads
+    package_name_results = qa_lib.check_package_names(folder)
+    file_results = qa_lib.check_file_names(folder)
     uri_results = qa_lib.check_uri_txt(folder)
     total_size = qa_lib.get_package_size(folder)
 
