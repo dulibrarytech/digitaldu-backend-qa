@@ -1,7 +1,8 @@
 import os
-from os.path import join, dirname
-import threading
 import shutil
+import threading
+from os.path import join, dirname
+
 import pysftp
 from PIL import Image
 from dotenv import load_dotenv
@@ -51,21 +52,21 @@ def check_folder_name(folder):
     errors = []
 
     if folder.find('new_') == -1:
-        errors.append('Folder name is missing "new_" part.')
+        errors.append('Collection folder name is missing "new_" part.')
 
     if folder.find('-resources') == -1:
-        errors.append('Folder name is missing "-resources" part.')
+        errors.append('Collection folder name is missing "-resources" part.')
 
     if folder.find('resources_') == -1:
-        errors.append('Folder name is missing "resources_" part')
+        errors.append('Collection folder name is missing "resources_" part')
 
     tmp = folder.split('_')
     is_id = tmp[-1].isdigit()
 
     if is_id == False:
-        errors.append('Folder is missing "URI" part')
+        errors.append('Collection folder is missing "URI" part')
 
-    return dict(result='folder_name_checked', errors=errors)
+    return dict(result='collection_folder_name_checked', errors=errors)
 
 
 def check_package_names(folder):
@@ -211,16 +212,16 @@ def check_pdf_file(full_path, file_name):
     """
     # TODO:...
     # try:
-        # print(full_path)
-        # print(file_name)
-        # TODO: reject anything over 900mb
-        # https://stackoverflow.com/questions/2104080/how-can-i-check-file-size-in-python
-        # i.e. Path('somefile.txt').stat().st_size
+    # print(full_path)
+    # print(file_name)
+    # TODO: reject anything over 900mb
+    # https://stackoverflow.com/questions/2104080/how-can-i-check-file-size-in-python
+    # i.e. Path('somefile.txt').stat().st_size
 
-        # return dict(error=False, file='')
+    # return dict(error=False, file='')
 
     # except OSError as error:
-        # return dict(error=str(error), file=file_name)
+    # return dict(error=str(error), file=file_name)
 
 
 def check_uri_txt(folder):
@@ -248,7 +249,7 @@ def check_uri_txt(folder):
     return dict(result='URI txt files checked', errors=errors)
 
 
-def get_package_size(folder):
+def get_total_batch_size(folder):
     """
     Checks package file size (bytes)
     @param: folder
@@ -260,12 +261,15 @@ def get_package_size(folder):
     total_size = 0
     errors = []
 
-    for dirpath, dirnames, filenames in os.walk(package):
-        for f in filenames:
-            fp = os.path.join(dirpath, f)
-            # skip if it is symbolic link
-            if not os.path.islink(fp):
-                total_size += os.path.getsize(fp)
+    try:
+        for dirpath, dirnames, filenames in os.walk(package):
+            for f in filenames:
+                fp = os.path.join(dirpath, f)
+                # skip if it is symbolic link
+                if not os.path.islink(fp):
+                    total_size += os.path.getsize(fp)
+    except:
+        errors.append('Unable to get total batch size')
 
     return dict(result=total_size, errors=errors)
 
@@ -280,8 +284,6 @@ def move_to_ingest(pid, folder):
 
     errors = []
     mode = 0o777
-
-    os.mkdir(folder, mode)
 
     try:
         shutil.move(ready_path + folder, ingest_path + folder)

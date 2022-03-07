@@ -79,16 +79,16 @@ def run_qa_on_ready():
 
     folder_name_results = qa_lib.check_folder_name(folder)
     package_name_results = qa_lib.check_package_names(folder)
-    file_results = qa_lib.check_file_names(folder)
+    file_count_results = qa_lib.check_file_names(folder)
     uri_results = qa_lib.check_uri_txt(folder)
-    total_size = qa_lib.get_package_size(folder)
+    total_batch_size = qa_lib.get_total_batch_size(folder)
 
     results = dict(
-        package_name_results=package_name_results,
         folder_name_results=folder_name_results,
-        file_results=file_results,
+        package_name_results=package_name_results,
+        file_count_results=file_count_results,
         uri_results=uri_results,
-        total_size=total_size
+        total_batch_size=total_batch_size
     )
 
     return json.dumps(results), 200
