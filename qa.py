@@ -214,4 +214,4 @@ def move_to_ingested():
     return json.dumps(results), 200
 
 
-serve(app, host='0.0.0.0', port=8080)
+serve(app, host='0.0.0.0', port=os.getenv('APP_PORT'))
