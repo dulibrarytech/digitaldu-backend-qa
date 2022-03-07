@@ -181,12 +181,12 @@ def check_sftp():
     if pid is None:
         return json.dumps(['Bad Request: Missing pid param.']), 400
 
-    local_file_count = request.args.get('local_file_count')
+    total_batch_file_count = request.args.get('total_batch_file_count')
 
-    if local_file_count == None:
+    if total_batch_file_count == None:
         return json.dumps(dict(message='File count not found.', data=[])), 200
 
-    results = qa_lib.check_sftp(pid, local_file_count)
+    results = qa_lib.check_sftp(pid, total_batch_file_count)
     return json.dumps(results), 200
 
 
