@@ -168,6 +168,7 @@ def check_sftp():
 
     api_key = request.args.get('api_key')
     pid = request.args.get('pid')
+    total_batch_file_count = request.args.get('total_batch_file_count')
     errors = []
 
     if api_key is None:
@@ -180,8 +181,6 @@ def check_sftp():
 
     if pid is None:
         return json.dumps(['Bad Request: Missing pid param.']), 400
-
-    total_batch_file_count = request.args.get('total_batch_file_count')
 
     if total_batch_file_count == None:
         return json.dumps(dict(message='File count not found.', data=[])), 200
