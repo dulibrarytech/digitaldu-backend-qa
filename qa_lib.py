@@ -147,6 +147,12 @@ def check_file_names(folder):
     for thread in threads:
         thread.join()
 
+    # TODO: add try catch
+    with open('check_image_file_errors.txt') as file_errors:
+        errors = file_errors.readlines()
+
+    print(errors)
+
     return dict(result=local_file_count, errors=errors)
 
 
@@ -200,7 +206,8 @@ def check_image_file(full_path, file_name):
         img.transpose(Image.FLIP_LEFT_RIGHT)  # attempt to manipulate file to determine if it's broken
         img.close()
     except OSError as error:
-        print(error)
+        errors = open('check_image_file_errors.txt', 'a+')
+        errors.write(file_name + ' - ' + str(error) + '\n')
 
 
 def check_pdf_file(full_path, file_name):
@@ -247,6 +254,36 @@ def check_uri_txt(folder):
             errors.append(i)
 
     return dict(result='URI txt files checked', errors=errors)
+
+
+def get_uri_txt(folder):
+    """
+    Gets ArchivesSpace URIs
+    @param: ready_path
+    @param: folder
+    @returns: Dictionary
+    """
+
+    uris = []
+    errors = []
+    packages = [f for f in os.listdir(ready_path + folder) if not f.startswith('.')]
+
+    if len(packages) == 0:
+        return errors.append(-1)
+
+    for i in packages:
+
+        package = ready_path + folder + '/' + i + '/'
+        files = [f for f in os.listdir(package) if not f.startswith('.')]
+
+        if 'uri.txt' in files:
+            # TODO: apply threads
+            uri_txt = ready_path + folder + '/' + i + '/uri.txt'
+            with open(f'{uri_txt}', 'r') as uri:
+                uri_text = uri.read()
+                uris.append(uri_text)
+
+    return dict(result=uris, errors=errors)
 
 
 def get_total_batch_size(folder):
