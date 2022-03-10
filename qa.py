@@ -84,7 +84,6 @@ def run_qa_on_ready():
     get_uri_results = qa_lib.get_uri_txt(folder)
     total_batch_size = qa_lib.get_total_batch_size(folder)
 
-    # TODO: delete check_image_file_errors.txt
     results = dict(
         folder_name_results=folder_name_results,
         package_name_results=package_name_results,

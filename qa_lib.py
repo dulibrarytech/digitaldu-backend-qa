@@ -20,6 +20,7 @@ sftp_path = os.getenv('SFTP_REMOTE_PATH')
 wasabi_endpoint = os.getenv('WASABI_ENDPOINT')
 wasabi_bucket = os.getenv('WASABI_BUCKET')
 wasabi_profile = os.getenv('WASABI_PROFILE')
+errors_file = os.getenv('ERRORS_FILE')
 
 
 def get_ready_folders():
@@ -125,6 +126,9 @@ def check_file_names(folder):
     files_arr = []
     errors = []
 
+    if os.path.exists(errors_file):
+        os.remove(errors_file)
+
     for i in packages:
 
         thread = threading.Thread(target=check_file_names_threads, args=(folder, i))
@@ -147,11 +151,11 @@ def check_file_names(folder):
     for thread in threads:
         thread.join()
 
-    # TODO: add try catch
-    with open('check_image_file_errors.txt') as file_errors:
-        errors = file_errors.readlines()
-
-    print(errors)
+    try:
+        with open(errors_file) as file_errors:
+            errors = file_errors.readlines()
+    except:
+        print('ERROR: Unable to open error file - ' + errors_file)
 
     return dict(result=local_file_count, errors=errors)
 
@@ -206,8 +210,11 @@ def check_image_file(full_path, file_name):
         img.transpose(Image.FLIP_LEFT_RIGHT)  # attempt to manipulate file to determine if it's broken
         img.close()
     except OSError as error:
-        errors = open('check_image_file_errors.txt', 'a+')
-        errors.write(file_name + ' - ' + str(error) + '\n')
+        try:
+            errors = open(errors_file, 'a+')
+            errors.write(file_name + ' - ' + str(error) + '\n')
+        except:
+            print('ERROR: Unable to create error file - ' + errors_file)
 
 
 def check_pdf_file(full_path, file_name):
