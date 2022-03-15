@@ -77,6 +77,7 @@ def run_qa_on_ready():
     if folder is None:
         return json.dumps(['Bad Request: Missing folder param']), 400
 
+    qa_lib.set_collection_folder_name(folder)
     folder_name_results = qa_lib.check_folder_name(folder)
     package_name_results = qa_lib.check_package_names(folder)
     file_count_results = qa_lib.check_file_names(folder)
@@ -202,7 +203,7 @@ def move_to_ingested():
     """
 
     api_key = request.args.get('api_key')
-    folder = request.args.get('folder')
+    # folder = request.args.get('folder')
     pid = request.args.get('pid')
 
     if api_key is None:
@@ -210,6 +211,7 @@ def move_to_ingested():
     elif api_key != os.getenv('API_KEY'):
         return json.dumps(['Access denied.']), 403
 
+    folder = qa_lib.get_collection_folder_name()
     results = qa_lib.move_to_ingested(pid, folder)
 
     return json.dumps(results), 200

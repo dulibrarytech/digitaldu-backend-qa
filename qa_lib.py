@@ -43,6 +43,36 @@ def get_ready_folders():
     return dict(result=ready_list, errors=[])
 
 
+def set_collection_folder_name(folder):
+    """
+    Creates collection folder file
+    @param: folder
+    @returns: void
+    """
+
+    try:
+        file = open('collection', 'w+')
+        file.write(folder)
+    except:
+        print('ERROR: Unable to create collection folder file - ' + folder)
+
+
+def get_collection_folder_name():
+    """
+    Gets collection folder file
+    @param: folder
+    @returns: string
+    """
+
+    try:
+        with open('collection') as collection_file:
+            folder = collection_file.read()
+    except:
+        print('ERROR: Unable to open error file - ' + errors_file)
+
+    return folder
+
+
 def check_folder_name(folder):
     """
     Checks if folder name conforms to naming standard
@@ -284,7 +314,7 @@ def get_uri_txt(folder):
         files = [f for f in os.listdir(package) if not f.startswith('.')]
 
         if 'uri.txt' in files:
-            # TODO: apply threads
+            # TODO: apply threads?
             uri_txt = ready_path + folder + '/' + i + '/uri.txt'
             with open(f'{uri_txt}', 'r') as uri:
                 uri_text = uri.read()
@@ -448,8 +478,13 @@ def move_to_ingested(pid, folder):
 
     if len(errors) == 0:
         result = 'packages_moved_to_ingested_folder'
+        os.remove('collection')
+        # TODO:
     else:
         result = 'packages_not_moved_to_ingested_folder'
+
+    #TODO: cleanup function - delete collection file, error file, delete collection folder on sftp
+
 
     return dict(result=result, errors=errors)
 
@@ -481,48 +516,32 @@ def move_to_s3(source, folder):
         except:
             errors.append('error')
 
-    # TODO: log instead
-    """
-    if len(errors) == 0:
-        result = ['Packages moved to Wasabi S3 bucket']
-    else:
-        result = ['Packages not moved to Wasabi S3 bucket']
-
-    return dict(result=result, errors=errors)
-    """
-
 
 # TODO: move to a "cleanup" function shutil.rmtree(ingest_path + folder.replace('new_', ''))
 def clean_up_sftp(pid):
+    """
+    Deletes collection folder from sftp server
+    :param pid
+    :return void
+    """
+
     host = os.getenv('SFTP_HOST')
     username = os.getenv('SFTP_ID')
     password = os.getenv('SFTP_PWD')
     cnopts = pysftp.CnOpts()
     cnopts.hostkeys = None
     sftp_path = os.getenv('SFTP_REMOTE_PATH')
-    '''
-    file_names = []
-    dir_names = []
-    un_name = []
 
-    def store_files_name(fname):
-        file_names.append(fname)
-
-    def store_dir_name(dirname):
-        dir_names.append(dirname)
-
-    def store_other_file_types(name):
-        un_name.append(name)
-    '''
     with pysftp.Connection(host=host, username=username, password=password, cnopts=cnopts) as sftp:
         print(sftp_path)
         sftp.cwd(sftp_path)
         package_deleted = sftp.execute('rm -R ' + pid)
         print(package_deleted)
+
         # sftp.walktree(remote_package, store_files_name, store_dir_name, store_other_file_types, recurse=True)
         # remote_file_count = len(file_names)
         # with sftp.execute('rm -R ' + pid):
         # with sftp.cd(remote_package):
         #    package_deleted = sftp.execute('rm -R ' + pid)
 
-        return dict(message='in_progress', file_names=file_names, remote_file_count=remote_file_count)
+        # return dict(message='in_progress', file_names=file_names, remote_file_count=remote_file_count)
