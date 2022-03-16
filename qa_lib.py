@@ -482,7 +482,7 @@ def move_to_ingested(pid, folder):
         except:
             print('collection file not found')
 
-        clean_up(pid)
+        clean_up(pid, folder)
         result = 'packages_moved_to_ingested_folder'
     else:
         result = 'packages_not_moved_to_ingested_folder'
@@ -518,10 +518,11 @@ def move_to_s3(source, folder):
             errors.append('error')
 
 
-def clean_up(pid):
+def clean_up(pid, folder):
     """
     Deletes collection folder from ingest folder and sftp server
     :param pid
+    :param folder
     :return void
     """
 
@@ -532,7 +533,7 @@ def clean_up(pid):
     cnopts.hostkeys = None
     sftp_path = os.getenv('SFTP_REMOTE_PATH')
 
-    shutil.rmtree(ingest_path + pid)
+    shutil.rmtree(ingest_path + folder)
 
     with pysftp.Connection(host=host, username=username, password=password, cnopts=cnopts) as sftp:
         sftp.cwd(sftp_path)
