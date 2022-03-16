@@ -220,14 +220,21 @@ def move_to_ingested():
 
 
 @app.route('/api/v1/qa/cleanup', methods=['GET'])
-def clean_up_sftp():
+def clean_up():
     """
     Test endpoint
     :return:
     """
 
+    api_key = request.args.get('api_key')
     pid = request.args.get('pid')
-    qa_lib.clean_up_sftp(pid)
+
+    if api_key is None:
+        return json.dumps(['Access denied.']), 403
+    elif api_key != os.getenv('API_KEY'):
+        return json.dumps(['Access denied.']), 403
+
+    qa_lib.clean_up(pid)
     return json.dumps('collection folder removed'), 200
 
 
