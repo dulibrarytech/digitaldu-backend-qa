@@ -477,14 +477,11 @@ def move_to_ingested(pid, folder):
             return errors.append('ERROR: Unable to move folder (move_to_ingested)')
 
     if len(errors) == 0:
-        result = 'packages_moved_to_ingested_folder'
         os.remove('collection')
         clean_up(pid)
+        result = 'packages_moved_to_ingested_folder'
     else:
         result = 'packages_not_moved_to_ingested_folder'
-
-    #TODO: cleanup function - delete collection file, error file, delete collection folder on sftp
-
 
     return dict(result=result, errors=errors)
 
