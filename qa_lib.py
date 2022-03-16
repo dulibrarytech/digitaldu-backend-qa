@@ -533,15 +533,5 @@ def clean_up_sftp(pid):
     sftp_path = os.getenv('SFTP_REMOTE_PATH')
 
     with pysftp.Connection(host=host, username=username, password=password, cnopts=cnopts) as sftp:
-        print(sftp_path)
         sftp.cwd(sftp_path)
-        package_deleted = sftp.execute('rm -R ' + pid)
-        print(package_deleted)
-
-        # sftp.walktree(remote_package, store_files_name, store_dir_name, store_other_file_types, recurse=True)
-        # remote_file_count = len(file_names)
-        # with sftp.execute('rm -R ' + pid):
-        # with sftp.cd(remote_package):
-        #    package_deleted = sftp.execute('rm -R ' + pid)
-
-        # return dict(message='in_progress', file_names=file_names, remote_file_count=remote_file_count)
+        sftp.execute('rm -R ' + pid)

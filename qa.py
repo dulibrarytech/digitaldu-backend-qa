@@ -227,7 +227,8 @@ def clean_up_sftp():
     """
 
     pid = request.args.get('pid')
-    clean_up_sftp(pid)
+    qa_lib.clean_up_sftp(pid)
+    return json.dumps('collection folder removed'), 200
 
 
 serve(app, host='0.0.0.0', port=os.getenv('APP_PORT'))
