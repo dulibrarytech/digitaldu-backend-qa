@@ -203,7 +203,7 @@ def move_to_ingested():
     """
 
     api_key = request.args.get('api_key')
-    # folder = request.args.get('folder')
+    folder = request.args.get('folder')
     pid = request.args.get('pid')
 
     if api_key is None:
@@ -211,10 +211,23 @@ def move_to_ingested():
     elif api_key != os.getenv('API_KEY'):
         return json.dumps(['Access denied.']), 403
 
-    folder = qa_lib.get_collection_folder_name()
+    if folder == 'collection':
+        folder = qa_lib.get_collection_folder_name()
+
     results = qa_lib.move_to_ingested(pid, folder)
 
     return json.dumps(results), 200
+
+
+@app.route('/api/v1/qa/cleanup', methods=['GET'])
+def clean_up_sftp():
+    """
+    Test endpoint
+    :return:
+    """
+
+    pid = request.args.get('pid')
+    clean_up_sftp(pid)
 
 
 serve(app, host='0.0.0.0', port=os.getenv('APP_PORT'))
