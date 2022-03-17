@@ -452,6 +452,7 @@ def move_to_ingested(pid, folder):
     errors = []
     ingested = ingested_path + folder.replace('new_', '')
     exists = os.path.isdir(ingested)
+    result = 'packages_not_moved_to_ingested_folder'
 
     if exists:
 
@@ -462,7 +463,11 @@ def move_to_ingested(pid, folder):
                 os.system('cp -R ' + os.path.join(ingest_path + pid, file_name) + ' ' + ingested)
 
             source = ingest_path + pid + '/'
-            move_to_s3(source, folder.replace('new_', ''))
+            move_result = move_to_s3(source, folder.replace('new_', ''))
+            if move_result == 1:
+                errors.append('ERROR: Unable to move packages to wasabi s3')
+            else:
+                shutil.rmtree(source)
         except:
             return errors.append('ERROR: Unable to move files to ingested folder (move_to_ingested)')
 
@@ -470,22 +475,25 @@ def move_to_ingested(pid, folder):
 
         try:
             shutil.move(ingest_path + pid, ingest_path + folder.replace('new_', ''))
+            # folder is renamed in this scenario # delete ingest package by collection name, not pid
             os.system('cp -R ' + ingest_path + folder.replace('new_', '') + ' ' + ingested)
             source = ingest_path
-            move_to_s3(source, '')
+            move_result = move_to_s3(source, '')
+            if move_result == 1:
+                errors.append('ERROR: Unable to move packages to wasabi s3')
+            else:
+                shutil.rmtree(ingest_path + folder.replace('new_', ''))
+
         except:
             return errors.append('ERROR: Unable to move folder (move_to_ingested)')
 
     if len(errors) == 0:
         try:
             os.remove('collection')
+            clean_up_sftp(pid)
+            result = 'packages_moved_to_ingested_folder'
         except:
             print('collection file not found')
-
-        clean_up(pid, folder)
-        result = 'packages_moved_to_ingested_folder'
-    else:
-        result = 'packages_not_moved_to_ingested_folder'
 
     return dict(result=result, errors=errors)
 
@@ -503,22 +511,29 @@ def move_to_s3(source, folder):
     aws_endpoint = '--endpoint-url=' + wasabi_endpoint
     aws_bucket = wasabi_bucket
     aws_args = '--recursive --profile ' + wasabi_profile
+    result = 1
 
     if folder != '':
         try:
             aws_cmd = aws_exec + ' ' + source + ' ' + aws_endpoint + ' ' + aws_bucket + folder + ' ' + aws_args
-            os.system(aws_cmd)
+            result = os.system(aws_cmd)
+            # if result == 0:
+                # shutil.rmtree(source)
         except:
             errors.append('error')
     else:
         try:
             aws_cmd = aws_exec + ' ' + source + ' ' + aws_endpoint + ' ' + aws_bucket + ' ' + aws_args
-            os.system(aws_cmd)
+            result = os.system(aws_cmd)
+            #if result == 0:
+                # shutil.rmtree(source)
         except:
             errors.append('error')
 
+    return result
 
-def clean_up(pid, folder):
+
+def clean_up_sftp(pid):
     """
     Deletes collection folder from ingest folder and sftp server
     :param pid
@@ -532,8 +547,6 @@ def clean_up(pid, folder):
     cnopts = pysftp.CnOpts()
     cnopts.hostkeys = None
     sftp_path = os.getenv('SFTP_REMOTE_PATH')
-
-    shutil.rmtree(ingest_path + folder)
 
     with pysftp.Connection(host=host, username=username, password=password, cnopts=cnopts) as sftp:
         sftp.cwd(sftp_path)
