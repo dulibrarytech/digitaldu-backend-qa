@@ -490,10 +490,14 @@ def move_to_ingested(pid, folder):
     if len(errors) == 0:
         try:
             os.remove('collection')
+        except:
+            print('collection file not found')
+
+        try:
             clean_up_sftp(pid)
             result = 'packages_moved_to_ingested_folder'
         except:
-            print('collection file not found')
+            print('unable to run clean up sftp funtion')
 
     return dict(result=result, errors=errors)
 
