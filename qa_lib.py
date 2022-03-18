@@ -157,7 +157,11 @@ def check_file_names(folder):
     errors = []
 
     if os.path.exists(errors_file):
-        os.remove(errors_file)
+
+        try:
+            os.remove(errors_file)
+        except:
+            print('Unable to delete errors_file')
 
     for i in packages:
 
