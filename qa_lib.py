@@ -475,7 +475,6 @@ def move_to_ingested(pid, folder):
 
         try:
             shutil.move(ingest_path + pid, ingest_path + folder.replace('new_', ''))
-            # folder is renamed in this scenario # delete ingest package by collection name, not pid
             os.system('cp -R ' + ingest_path + folder.replace('new_', '') + ' ' + ingested)
             source = ingest_path
             move_result = move_to_s3(source, '')
