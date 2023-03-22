@@ -20,6 +20,8 @@ sftp_path = os.getenv('SFTP_REMOTE_PATH')
 wasabi_endpoint = os.getenv('WASABI_ENDPOINT')
 wasabi_bucket = os.getenv('WASABI_BUCKET')
 wasabi_profile = os.getenv('WASABI_PROFILE')
+uid = os.getenv('UID')
+gid = os.getenv('GID')
 errors_file = os.getenv('ERRORS_FILE')
 
 
@@ -53,8 +55,11 @@ def set_collection_folder_name(folder):
     try:
         file = open('collection', 'w+')
         file.write(folder)
-    except:
+        return True
+    except Exception as e:
+        print(e)
         print('ERROR: Unable to create collection folder file - ' + folder)
+        return False
 
 
 def get_collection_folder_name():
@@ -67,7 +72,8 @@ def get_collection_folder_name():
     try:
         with open('collection') as collection_file:
             folder = collection_file.read()
-    except:
+    except Exception as e:
+        print(e)
         print('ERROR: Unable to open error file - ' + errors_file)
 
     return folder
@@ -159,7 +165,8 @@ def check_file_names(folder):
     try:
         if os.path.exists(errors_file):
             os.remove(errors_file)
-    except:
+    except Exception as e:
+        print(e)
         print('Unable to delete errors_file')
 
     for i in packages:
@@ -187,7 +194,8 @@ def check_file_names(folder):
     try:
         with open(errors_file) as file_errors:
             errors = file_errors.readlines()
-    except:
+    except Exception as e:
+        print(e)
         print('ERROR: Unable to open error file - ' + errors_file)
 
     return dict(result=local_file_count, errors=errors)
@@ -246,7 +254,8 @@ def check_image_file(full_path, file_name):
         try:
             errors = open(errors_file, 'a+')
             errors.write(file_name + ' - ' + str(error) + '\n')
-        except:
+        except Exception as e:
+            print(e)
             print('ERROR: Unable to create error file - ' + errors_file)
 
 
@@ -317,7 +326,6 @@ def get_uri_txt(folder):
         files = [f for f in os.listdir(package) if not f.startswith('.')]
 
         if 'uri.txt' in files:
-            # TODO: apply threads?
             uri_txt = ready_path + folder + '/' + i + '/uri.txt'
             with open(f'{uri_txt}', 'r') as uri:
                 uri_text = uri.read()
@@ -345,7 +353,8 @@ def get_total_batch_size(folder):
                 # skip if it is symbolic link
                 if not os.path.islink(fp):
                     total_size += os.path.getsize(fp)
-    except:
+    except Exception as e:
+        print(e)
         errors.append('Unable to get total batch size')
 
     return dict(result=total_size, errors=errors)
@@ -364,17 +373,20 @@ def move_to_ingest(pid, folder):
 
     try:
         shutil.move(ready_path + folder, ingest_path + folder)
-    except:
+    except Exception as e:
+        print(e)
         errors.append('ERROR: Unable to move folder (move_to_ingest)')
 
     try:
         os.rename(ingest_path + folder, ingest_path + pid)
-    except:
+    except Exception as e:
+        print(e)
         errors.append('ERROR: Unable to rename folder (move_to_ingest)')
 
     try:
         os.mkdir(ready_path + folder, mode)
-    except:
+    except Exception as e:
+        print(e)
         errors.append('ERROR: Unable to create folder (move_to_ingest)')
 
     if len(errors) == 0:
@@ -444,7 +456,7 @@ def check_sftp(pid, local_file_count):
                     remote_package_size=remote_package_size[0].decode().strip().replace('\t', ''))
 
 
-def move_to_ingested(pid, folder):
+def move_to_ingested(uuid, folder):
     """
     Moves packages to ingested folder and Wasabi S3 bucket
     @param: pid
@@ -460,24 +472,25 @@ def move_to_ingested(pid, folder):
     if exists:
 
         try:  # move only files because collection folder already exists
-            file_names = [f for f in os.listdir(ingest_path + pid) if not f.startswith('.')]
+            file_names = [f for f in os.listdir(ingest_path + uuid) if not f.startswith('.')]
 
             for file_name in file_names:
-                os.system('cp -R ' + os.path.join(ingest_path + pid, file_name) + ' ' + ingested)
+                os.system('cp -R ' + os.path.join(ingest_path + uuid, file_name) + ' ' + ingested)
 
-            source = ingest_path + pid + '/'
+            source = ingest_path + uuid + '/'
             move_result = move_to_s3(source, folder.replace('new_', ''))
             if move_result == 1:
                 errors.append('ERROR: Unable to move packages to wasabi s3')
             else:
                 shutil.rmtree(source)
-        except:
+        except Exception as e:
+            print(e)
             return errors.append('ERROR: Unable to move files to ingested folder (move_to_ingested)')
 
     else:  # move entire folder
 
         try:
-            shutil.move(ingest_path + pid, ingest_path + folder.replace('new_', ''))
+            shutil.move(ingest_path + uuid, ingest_path + folder.replace('new_', ''))
             os.system('cp -R ' + ingest_path + folder.replace('new_', '') + ' ' + ingested)
             source = ingest_path
             move_result = move_to_s3(source, '')
@@ -486,22 +499,45 @@ def move_to_ingested(pid, folder):
             else:
                 shutil.rmtree(ingest_path + folder.replace('new_', ''))
 
-        except:
+        except Exception as e:
+            print(e)
             return errors.append('ERROR: Unable to move folder (move_to_ingested)')
 
     if len(errors) == 0:
         try:
+            # deletes file
             os.remove('collection')
-        except:
+        except Exception as e:
+            print(e)
             print('collection file not found')
 
         try:
-            clean_up_sftp(pid)
+            clean_up_sftp(uuid)
             result = 'packages_moved_to_ingested_folder'
-        except:
-            print('unable to run clean up sftp funtion')
+        except Exception as e:
+            print(e)
+            print('unable to run clean up sftp function')
 
     return dict(result=result, errors=errors)
+
+
+def reset_permissions(folder):
+    """
+    Resets ready folder permissions so that staff is able to add more packages
+    @param: folder
+    :returns: void
+    """
+
+    message = 'Permissions changed'
+
+    try:
+        cmd = 'chown -R ' + uid + ':' + gid + ' ' + ready_path + folder
+        os.system(cmd)
+    except Exception as e:
+        print(e)
+        message = 'Unable to reset permissions'
+
+    return message
 
 
 def move_to_s3(source, folder):
@@ -523,17 +559,15 @@ def move_to_s3(source, folder):
         try:
             aws_cmd = aws_exec + ' ' + source + ' ' + aws_endpoint + ' ' + aws_bucket + folder + ' ' + aws_args
             result = os.system(aws_cmd)
-            # if result == 0:
-                # shutil.rmtree(source)
-        except:
+        except Exception as e:
+            print(e)
             errors.append('error')
     else:
         try:
             aws_cmd = aws_exec + ' ' + source + ' ' + aws_endpoint + ' ' + aws_bucket + ' ' + aws_args
             result = os.system(aws_cmd)
-            #if result == 0:
-                # shutil.rmtree(source)
-        except:
+        except Exception as e:
+            print(e)
             errors.append('error')
 
     return result
