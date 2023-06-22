@@ -74,7 +74,7 @@ def get_collection_folder_name():
             folder = collection_file.read()
     except Exception as e:
         print(e)
-        print('ERROR: Unable to open error file - ' + errors_file)
+        print('ERROR: Unable to open collection file')
 
     return folder
 
@@ -181,7 +181,7 @@ def check_file_names(folder):
         [os.remove(package + f) for f in os.listdir(package) if f.startswith('.')]
 
         if len(files) < 2:
-            errors.append(i)
+            errors.append(i + '  is missing files.')
 
         for j in files:
             files_arr.append(j)
@@ -230,9 +230,9 @@ def check_file_names_threads(folder, i):
                 # validates image
                 check_image_file(file, j)
 
-            # check pdfs here
-            if file.endswith('.pdf'):
-                check_pdf_file(file, j)
+            # TODO: check pdfs here
+            # if file.endswith('.pdf'):
+                # check_pdf_file(file, j)
 
 
 def check_image_file(full_path, file_name):
@@ -271,11 +271,8 @@ def check_pdf_file(full_path, file_name):
     # print(full_path)
     # print(file_name)
     # TODO: reject anything over 900mb
-    # https://stackoverflow.com/questions/2104080/how-can-i-check-file-size-in-python
     # i.e. Path('somefile.txt').stat().st_size
-
     # return dict(error=False, file='')
-
     # except OSError as error:
     # return dict(error=str(error), file=file_name)
 
@@ -300,7 +297,7 @@ def check_uri_txt(folder):
         files = [f for f in os.listdir(package) if not f.startswith('.')]
 
         if 'uri.txt' not in files:
-            errors.append(i)
+            errors.append(i + ' is missing a uri.txt file')
 
     return dict(result='URI txt files checked', errors=errors)
 
@@ -360,7 +357,7 @@ def get_total_batch_size(folder):
     return dict(result=total_size, errors=errors)
 
 
-def move_to_ingest(pid, folder):
+def move_to_ingest(uuid, folder):
     '''
     Moves folder from ready to ingest folder and renames it using pid
     @param: pid
@@ -378,7 +375,7 @@ def move_to_ingest(pid, folder):
         errors.append('ERROR: Unable to move folder (move_to_ingest)')
 
     try:
-        os.rename(ingest_path + folder, ingest_path + pid)
+        os.rename(ingest_path + folder, ingest_path + uuid)
     except Exception as e:
         print(e)
         errors.append('ERROR: Unable to rename folder (move_to_ingest)')
@@ -470,6 +467,8 @@ def move_to_ingested(uuid, folder):
     result = 'packages_not_moved_to_ingested_folder'
 
     if exists:
+
+        reset_permissions(folder)
 
         try:  # move only files because collection folder already exists
             file_names = [f for f in os.listdir(ingest_path + uuid) if not f.startswith('.')]
