@@ -476,6 +476,7 @@ def move_to_ingested(uuid, folder):
 
     if len(errors) == 0:
         try:
+            # TODO
             print('delete collection file after batch is complete')
             # deletes file
             # os.remove('collection')
