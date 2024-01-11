@@ -7,7 +7,7 @@ from flask import Flask, request
 from flask_cors import CORS
 from waitress import serve
 
-import qa_lib
+import qa_lib_old
 
 dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path)
@@ -439,7 +439,7 @@ def check_sftp():
     if uuid is None:
         return json.dumps(['Bad Request: Missing uuid param.']), 400
 
-    if total_batch_file_count is None:
+    if total_batch_file_count == None:
         return json.dumps(dict(message='File count not found.', data=[])), 200
 
     results = qa_lib.check_sftp(uuid, total_batch_file_count)

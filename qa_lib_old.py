@@ -4,6 +4,7 @@ import threading
 from os.path import join, dirname
 
 import pysftp
+from PIL import Image
 from dotenv import load_dotenv
 
 dotenv_path = join(dirname(__file__), '.env')
@@ -99,7 +100,7 @@ def check_folder_name(folder):
     tmp = folder.split('_')
     is_id = tmp[-1].isdigit()
 
-    if is_id is False:
+    if is_id == False:
         errors.append('Collection folder is missing "URI" part')
 
     return dict(result='collection_folder_name_checked', errors=errors)
@@ -235,6 +236,40 @@ def check_file_names_threads(folder, i):
             elif call_number != -1:
                 os.rename(package + j, package + j.replace(' ', ''))
 
+            # check images here
+            file = package + j
+            if file.endswith('.tiff') or file.endswith('.tif') or file.endswith('.jpg') or file.endswith('.png'):
+                # validates image
+                check_image_file(file, j)
+
+            # TODO: check pdf size here
+            # if file.endswith('.pdf'):
+                # check_pdf_file(file, j)
+
+
+def check_image_file(full_path, file_name):
+    """
+    Checks image files to determine if they are broken/corrupt
+    @param: full_path
+    @param: file_name
+    @returns: Dictionary
+    """
+
+    try:
+        img = Image.open(full_path)
+        img.verify()  # confirm that file is an image
+        img.close()
+        img = Image.open(full_path)
+        img.transpose(Image.FLIP_LEFT_RIGHT)  # attempt to manipulate file to determine if it's broken
+        img.close()
+    except OSError as error:
+        try:
+            errors = open(errors_file, 'a+')
+            errors.write(file_name + ' - ' + str(error) + '\n')
+        except Exception as e:
+            print(e)
+            print('ERROR: Unable to create error file - ' + errors_file)
+
 
 def check_uri_txt(folder):
     """
@@ -271,8 +306,13 @@ def get_uri_txt(folder, package):
 
     uris = []
     errors = []
-    package_path = ready_path + folder + '/' + package + '/'
-    files = [f for f in os.listdir(package_path) if not f.startswith('.')]
+    # packages = [f for f in os.listdir(ready_path + folder) if not f.startswith('.')]
+
+    # if len(packages) == 0:
+    #   return errors.append(-1)
+
+    package = ready_path + folder + '/' + package + '/'
+    files = [f for f in os.listdir(package) if not f.startswith('.')]
 
     if 'uri.txt' in files:
         uri_txt = ready_path + folder + '/' + package + '/uri.txt'
@@ -280,6 +320,18 @@ def get_uri_txt(folder, package):
             uri_text = uri.read()
             uris.append(uri_text)
 
+    """"
+    for i in packages:
+
+        package = ready_path + folder + '/' + i + '/'
+        files = [f for f in os.listdir(package) if not f.startswith('.')]
+
+        if 'uri.txt' in files:
+            uri_txt = ready_path + folder + '/' + i + '/uri.txt'
+            with open(f'{uri_txt}', 'r') as uri:
+                uri_text = uri.read()
+                uris.append(uri_text)
+    """
     return dict(result=uris, errors=errors)
 
 
@@ -476,9 +528,8 @@ def move_to_ingested(uuid, folder):
 
     if len(errors) == 0:
         try:
-            print('delete collection file after batch is complete')
             # deletes file
-            # os.remove('collection')
+            os.remove('collection')
         except Exception as e:
             print(e)
             print('collection file not found')
